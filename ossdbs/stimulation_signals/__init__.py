@@ -7,6 +7,7 @@ from .rectangle_signal import RectangleSignal
 from .signal import FrequencyDomainSignal, TimeDomainSignal
 from .trapezoid_signal import TrapezoidSignal
 from .triangle_signal import TriangleSignal
+from .neuron_current_signals import NeuronCurrentSignal
 from .utilities import (
     get_indices_in_octave_band,
     get_maximum_octave_band_index,
@@ -23,6 +24,7 @@ __all__ = [
     "TimeDomainSignal",
     "TrapezoidSignal",
     "TriangleSignal",
+    "NeuronCurrentSignal",
     "get_indices_in_octave_band",
     "get_maximum_octave_band_index",
     "get_minimum_octave_band_index",

@@ -41,7 +41,7 @@ class Pathway(PointModel):
         name: str
         points: np.ndarray
         status: int  # 0 - normal, -1 - outside domain/encap, -2 - csf
-        orig_inx: int  # "original" indices of streamlines
+        orig_inx: int = -1  # "original" indices of streamlines (default -1 if not needed)
 
     @dataclass
     class Population:
@@ -59,7 +59,7 @@ class Pathway(PointModel):
         name: str
         axons: list["Pathway.Axon"]
 
-    def __init__(self, input_path: str, export_field: bool = False) -> None:
+    def __init__(self, input_path: str, export_field: bool = False, stim_type: str = "None") -> None:
         # identifiers
         self._name = "PAM"
         self._export_field = export_field
@@ -72,10 +72,21 @@ class Pathway(PointModel):
         self.time_domain_conversion = True
 
         with h5py.File(self._path, "r") as file:
-            populations = [
-                self.Population(group, self._create_axons(file, group))
-                for group in file.keys()
+        #     populations = [
+        #         self.Population(group, self._create_axons(file, group))
+        #         for group in file.keys()
+        #     ]
+
+            # Ignore datasets named "TimeSteps[us]"
+            groups = [
+                key for key in file.keys()
+                if not key.startswith("TimeSteps")
             ]
+            populations = [
+                self.Population(group, self._create_axons(file, group, stim_type))
+                for group in groups
+            ]
+
 
         self._populations = populations
         n_points = sum(
@@ -85,13 +96,14 @@ class Pathway(PointModel):
                 for axon in sorted(population.axons, key=lambda x: int(x.name[4:]))
             ]
         )
+
         self._location = np.full(n_points, "")
         self._coordinates = self._initialize_coordinates()
 
         # will be set later
         self._lattice = None
 
-    def _create_axons(self, file: h5py.File, group: str) -> list:
+    def _create_axons(self, file: h5py.File, group: str, stim_type) -> list:
         """Create axons based on the input from the .h5 file.
 
         Parameters
@@ -107,15 +119,22 @@ class Pathway(PointModel):
         axons: list
             Returns list of all axons within one group.
         """
-        return [
-            self.Axon(
-                sub_group,
-                np.array(file[group][sub_group]),
-                0,
-                file[group][sub_group].attrs["inx"],
-            )
-            for sub_group in file[group].keys()
-        ]
+        if stim_type == "Im":
+            return [
+                self.Axon(sub_group, np.array(file[group][sub_group]), 0)
+                for sub_group in file[group].keys()
+                if sub_group.startswith("axon")
+            ]
+        else:
+            return [
+                self.Axon(
+                    sub_group,
+                    np.array(file[group][sub_group]),
+                    0,
+                    file[group][sub_group].attrs["inx"],
+                )
+                for sub_group in file[group].keys()
+            ]
 
     def _initialize_coordinates(self) -> np.ndarray:
         return np.concatenate(
@@ -308,6 +327,46 @@ class Pathway(PointModel):
                     idx_axon += axon_length
         _logger.info("Marked axons inside CSF and encapsulation layer")
         return
+    
+    def remove_axons_in_csf_encap(self, grid_pts: np.ma.MaskedArray) -> np.ndarray:
+        x, y, z = grid_pts.T
+        lattice_mask_no_csf_encap = np.zeros_like(self.lattice_mask, dtype=bool)
+        # compute number of points after removing axons in csf, encap, and outside domain
+        n_points = 0
+        for population in self._populations:
+            for axon in sorted(population.axons, key=lambda x: int(x.name[4:])):
+                axon_length = axon.points.shape[0]
+                if axon.status == 0:
+                    n_points += axon_length
+        filtered_points = np.zeros((n_points, 3))
+        idx_points = 0
+        idx_maskpoints = 0
+        idx_grid = 0
+        for population in self._populations:
+            counter = 0
+            n_axons = len(population.axons)
+            for axon in sorted(population.axons, key=lambda x: int(x.name[4:])):
+                axon_length = axon.points.shape[0]
+                if axon.status != 0:
+                    idx_maskpoints += axon_length
+                if axon.status == 0:
+                    counter += 1
+                    filtered_points[idx_points : idx_points + axon_length, 0] = x.data[
+                        idx_grid : idx_grid + axon_length
+                    ]
+                    filtered_points[idx_points : idx_points + axon_length, 1] = y.data[
+                        idx_grid : idx_grid + axon_length
+                    ]
+                    filtered_points[idx_points : idx_points + axon_length, 2] = z.data[
+                        idx_grid : idx_grid + axon_length
+                    ]
+                    lattice_mask_no_csf_encap[idx_maskpoints:idx_maskpoints+axon_length, :] = True
+                    idx_points += axon_length
+                    idx_maskpoints += axon_length
+                idx_grid += axon_length
+                
+            _logger.info(f"Outside the domain+csf+encap: {n_axons - counter}")
+        return lattice_mask_no_csf_encap, filtered_points
 
     def create_index(self, lattice: np.ndarray) -> np.ndarray:
         """Create index for each point to the matching axon.
@@ -391,7 +450,7 @@ class Pathway(PointModel):
         """
         raise NotImplementedError("Pathway results can not be stored in Nifti format.")
 
-    def prepare_VCM_specific_evaluation(self, mesh: Mesh, conductivity_cf):
+    def prepare_VCM_specific_evaluation(self, mesh: Mesh, conductivity_cf, exclude_csf_encap):
         """Prepare data structure according to mesh.
 
         Parameters
@@ -425,6 +484,11 @@ class Pathway(PointModel):
 
         # create index for axons
         self._axon_index = self.create_index(self.lattice)
+
+        self.lattice_mask_no_csf_encap, self.lattice_no_csf_encap = self.remove_axons_in_csf_encap(grid_pts)
+        self._axon_index_no_csf_encap = self.create_index(self.lattice_no_csf_encap)
+        if exclude_csf_encap:
+            self.exclude_csf_encap(self.inside_csf, self.inside_encap)
 
     def export_field_at_frequency(
         self,

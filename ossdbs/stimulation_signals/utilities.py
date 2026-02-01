@@ -4,7 +4,7 @@
 import logging
 
 import numpy as np
-from scipy.fft import irfft
+from scipy.fft import ifft, irfft
 
 _logger = logging.getLogger(__name__)
 
@@ -47,6 +47,18 @@ def retrieve_time_domain_signal_from_fft(
     signal = irfft(fft_signal, n=signal_length)
     timesteps = get_timesteps(cutoff_frequency, base_frequency, len(signal))
     return timesteps, signal
+
+def retrieve_lfp_time_domain_signal_from_fft(fft_signal: np.ndarray) -> np.ndarray:
+    """Compute time-domain signal via fft.
+    Does not calculate timesteps, as they are stored in  the neuron current signal object.
+        
+    Parameters
+    ----------
+    fft_signal: np.ndarray
+        Frequency-domain signal
+    """
+    signal = ifft(fft_signal, axis=0, workers=-1)
+    return signal.real
 
 
 def reconstruct_time_signals(

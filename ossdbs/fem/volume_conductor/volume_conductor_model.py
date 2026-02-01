@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 import ngsolve
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from ossdbs.fem.mesh import Mesh
 from ossdbs.fem.solver import Solver
@@ -18,6 +19,7 @@ from ossdbs.model_geometry import Contacts, ModelGeometry
 from ossdbs.point_analysis import Lattice, PointModel
 from ossdbs.stimulation_signals import (
     FrequencyDomainSignal,
+    NeuronCurrentSignal,
     get_indices_in_octave_band,
     get_octave_band_indices,
     get_timesteps,
@@ -26,6 +28,8 @@ from ossdbs.stimulation_signals import (
 from ossdbs.utils.vtk_export import FieldSolution
 
 from .conductivity import ConductivityCF
+
+from ossdbs.stimulation_signals.utilities import retrieve_lfp_time_domain_signal_from_fft
 
 _logger = logging.getLogger(__name__)
 
@@ -118,6 +122,7 @@ class VolumeConductor(ABC):
     def run_full_analysis(
         self,
         frequency_domain_signal: FrequencyDomainSignal,
+        nrn_signal: list[NeuronCurrentSignal] = None,
         compute_impedance: bool = False,
         export_vtk: bool = False,
         point_models: list[PointModel] | None = None,
@@ -184,6 +189,11 @@ class VolumeConductor(ABC):
                     _do_AMR = True
 
         multisine_mode = np.all(np.isclose(self.signal.amplitudes, 1.0))
+
+        # whether to exclude axons with points in CSF and encapsulation layer
+        exclude_csf_encap = False
+        if nrn_signal is not None:
+            exclude_csf_encap = True
 
         # always compute impedance for CC with 2 contacts
         if self.current_controlled and len(self.contacts.active) == 2:
@@ -339,11 +349,17 @@ class VolumeConductor(ABC):
                 for point_model in point_models:
                     point_model.output_path = self.output_path
                     point_model.prepare_VCM_specific_evaluation(
-                        self.mesh, self.conductivity_cf
+                        self.mesh, self.conductivity_cf, exclude_csf_encap
                     )
                     point_model.prepare_frequency_domain_data_structure(
                         len(self.signal.frequencies), out_of_core
                     )
+                                    # precompute lattice masks for LFP computation
+                if nrn_signal is not None:
+                    lfp_signals = []
+                    for mask, freq_lfp_signal in zip(point_model.lattice_mask, nrn_signal.fourier_coefficients):
+                        if np.all(mask):
+                            lfp_signals.append(freq_lfp_signal)
 
             # copy solution to point models
             self._process_frequency_domain_solution(band_indices, point_models)
@@ -379,6 +395,20 @@ class VolumeConductor(ABC):
                 }
             )
             df.to_csv(os.path.join(self.output_path, "impedance.csv"), index=False)
+
+        # compute LFP at floating contacts
+        if nrn_signal is not None:
+            _logger.info("Launching reconstruction of LFP at electrode contact in time domain")
+            timesteps = nrn_signal.simulation_times
+            lfp_time_domain, recording_contact = self._pm_compute_lfp_at_contact(nrn_signal.fft_freqs, lfp_signals, point_models, nrn_signal)
+            lfp_at_contact = {}
+            lfp_at_contact["time"] = timesteps
+            lfp_at_contact[recording_contact] = (lfp_time_domain)
+            self.plot_solution_in_time_domain(lfp_at_contact, "LFP", "nV")
+            df = pd.DataFrame(lfp_at_contact)
+            df.to_csv(
+                os.path.join(self.output_path, "lfp_at_contact_in_time.csv"), index=False
+            )
 
         # export time domain solution if a proper signal has been passed
         _logger.info("Launching reconstruction of time domain")
@@ -928,12 +958,18 @@ class VolumeConductor(ABC):
         if self.current_controlled:
             for contact_idx, contact in enumerate(self.contacts.active):
                 for freq_idx in band_indices:
-                    scale_factor = self._scale_factor * self.signal.amplitudes[freq_idx]
+                    # scale_factor = self._scale_factor * self.signal.amplitudes[freq_idx]
+                    # self._free_stimulation_variable[freq_idx, contact_idx] = (
+                    #     scale_factor * contact.voltage
+                    # )
                     self._free_stimulation_variable[freq_idx, contact_idx] = (
-                        scale_factor * contact.voltage
-                    )
+                        self._scale_factor * self.signal.amplitudes[freq_idx] * contact.voltage
+                    )                    
+                    # self._stimulation_variable[freq_idx, contact_idx] = (
+                    #     scale_factor * contact.current
+                    # )
                     self._stimulation_variable[freq_idx, contact_idx] = (
-                        scale_factor * contact.current
+                        self.signal.amplitudes[freq_idx] * contact.current
                     )
         else:
             estimated_currents = self.estimate_currents()
@@ -1112,3 +1148,49 @@ class VolumeConductor(ABC):
             self.mesh.refine_by_material_cf(
                 self.conductivity_cf.material_distribution(self.mesh)
             )
+    def _pm_compute_lfp_at_contact(self, frequencies, frequency_domain_lfp_signals, point_models, nrn_signal=None):
+        """Compute local field potential caused by the point models at the recording electrode contact ."""
+
+        # get the name of the recording electrode contact
+        _logger.info("Computing LFP at recording contact.")
+        recording_contacts = [contact.name for contact in self.contacts.active if getattr(contact, "voltage", None) == 1]
+        if len(recording_contacts) == 0:
+            _logger.warning("No active contact with voltage == 1 found for recording.")
+        elif len(recording_contacts) > 1:
+            _logger.warning("More than one active contact with voltage == 1 found for recording: "
+                            f"{', '.join(recording_contacts)}")
+        else:
+            recording_contact = recording_contacts[0]
+
+        #calculate the LFP at the recording contact
+        lfp_share_freq_domain = {}
+        lfp_share_freq_domain["frequency"] = frequencies
+        lfp_at_electrode_contact = np.zeros_like(frequency_domain_lfp_signals[0])
+        # For each compartment, compute its contribution
+        # and sum the contributions from all neurons for each floating contact
+        for idx, point_model in enumerate(point_models):
+            lfp_share_freq_domain[f"point_model_{idx}"] = (
+                point_model.tmp_potential_freq_domain[:,:frequency_domain_lfp_signals[0].size] *
+                frequency_domain_lfp_signals
+            ).sum(axis=0)
+            lfp_at_electrode_contact += lfp_share_freq_domain[f"point_model_{idx}"]
+
+        # Use inverse FFT to retrieve time-domain signal using full spectrum nrn_signal
+        lfp_time_domain = retrieve_lfp_time_domain_signal_from_fft(lfp_at_electrode_contact)
+        return lfp_time_domain, recording_contact
+
+    def plot_solution_in_time_domain(self, time_domain_signal, param_id: str = "Signal", unit: str = "arb. unit") -> None:
+        """Plot the time domain signal for every entry in time_domain_signal except 'time'."""
+        time = time_domain_signal["time"]
+        for key in time_domain_signal:
+            if key == "time":
+                continue
+            plt.figure()
+            plt.plot(time, time_domain_signal[key])
+            plt.xlabel("Time [s]")
+            plt.ylabel(f"{param_id} [{unit}]")
+            plt.title(f"{param_id} over Time at {key}")
+            plt.show()
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.output_path, f"{param_id}_at_{key}.pdf"))
+            plt.close()

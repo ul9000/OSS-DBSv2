@@ -95,6 +95,7 @@ class Settings:
             "CounterAmplitude": 1.0,  # relative to amplitude given by contact
             "CutoffFrequency": 1e6,
             "CurrentControlled": False,
+            "Timestep[s]": 0.0,
         },
         "Solver": {
             "Type": "CG",

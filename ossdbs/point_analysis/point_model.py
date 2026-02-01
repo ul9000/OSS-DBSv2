@@ -109,6 +109,27 @@ class PointModel(ABC):
             list of points in encapsulation layer
         """
         raise NotImplementedError("Filtering of points not implemented.")
+    
+    def exclude_csf_encap(self, inside_csf: np.ndarray, inside_encap: np.ndarray):
+        """Remove points in CSF or encapsulation layer.
+
+        Parameters
+        ----------
+        inside_csf: np.ndarray
+            list of points in csf
+        inside_encap: np.ndarray
+            list of points in encapsulation layer
+        """
+        self._lattice = self.lattice_no_csf_encap
+        #self.lattice = self.lattice_no_csf_encap
+        self._lattice_mask = self.lattice_mask_no_csf_encap
+        #self.lattice_mask = self.lattice_mask_no_csf_encap
+        self._axon_index = self._axon_index_no_csf_encap
+        #self.axon_index = self._axon_index_no_csf_encap
+        self._inside_csf = np.zeros((self.lattice.shape[0],1), dtype=bool)
+        #self.inside_csf = np.zeros(self.lattice.shape[0], dtype=bool)
+        self._inside_encap = np.zeros((self.lattice.shape[0],1), dtype=bool)
+        #self.inside_encap = np.zeros(self.lattice.shape[0], dtype=bool)
 
     @abstractmethod
     def save_as_nifti(

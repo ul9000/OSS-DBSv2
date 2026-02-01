@@ -8,6 +8,7 @@ import logging
 import os
 
 import numpy as np
+import h5py
 
 from ossdbs.dielectric_model import (
     default_dielectric_parameters,
@@ -32,8 +33,10 @@ from ossdbs.stimulation_signals import (
     TimeDomainSignal,
     TrapezoidSignal,
     TriangleSignal,
+    NeuronCurrentSignal,
 )
 from ossdbs.utils.nifti1image import DiffusionTensorImage, MagneticResonanceImage
+from ossdbs.stimulation_signals.utilities import retrieve_lfp_time_domain_signal_from_fft
 
 _logger = logging.getLogger(__name__)
 
@@ -227,6 +230,9 @@ def set_contact_and_encapsulation_layer_properties(settings, model_geometry):
                 model_geometry.update_encapsulation_layer(
                     encap_idx, new_parameters["EncapsulationLayer"]
                 )
+    if settings["StimulationSignal"]["Type"] == "Im":
+        brain_surface_idx = model_geometry.get_contact_index("BrainSurface")
+        model_geometry.update_contact(brain_surface_idx, {"Active": True, "Floating": False, "Voltage[V]": 0.0, "Current[A]": -1.0})
     if "Surfaces" in settings:
         for surface in settings["Surfaces"]:
             idx = model_geometry.get_contact_index(surface["Name"])
@@ -295,7 +301,8 @@ def generate_point_models(settings: dict):
         file_name = settings["PointModel"]["Pathway"]["FileName"]
         _logger.info(f"Import neuron geometries stored in {file_name}")
         export_field = settings["PointModel"]["Pathway"]["ExportField"]
-        point_models.append(Pathway(file_name, export_field=export_field))
+        stim_type = settings["StimulationSignal"]["Type"]
+        point_models.append(Pathway(file_name, export_field=export_field, stim_type=stim_type))
     if settings["PointModel"]["Lattice"]["Active"]:
         shape_par = settings["PointModel"]["Lattice"]["Shape"]
         shape = shape_par["x"], shape_par["y"], shape_par["z"]
@@ -404,14 +411,81 @@ def prepare_volume_conductor_model(
         model_geometry, conductivity, solver, order, mesh_parameters, output_path
     )
 
+def prepare_neuron_currents(settings):
+    time_domain_currents = read_neuron_currents(settings) # in nA
+    for key in settings:
+        if key.startswith("StimulationSignal") and isinstance(settings[key], dict):
+            signal_settings = settings[key]
+    timestep = signal_settings["Timestep[s]"]
+    base_frequency = time_domain_currents["time"].shape[0] / timestep
+    cutoff_frequency = settings["StimulationSignal"]["CutoffFrequency"]
+    nrn_signal = NeuronCurrentSignal(base_frequency, cutoff_frequency, timestep, time_domain_currents["time"])
+    fft_freqs = nrn_signal.get_neuron_current_fft_freqs(
+        nrn_signal.cutoff_frequency, time_domain_currents["time"]
+    )
+    nrn_signal.signal_length = len(fft_freqs)
+    freq_signal_list = []
+    for i in range(len(time_domain_currents["signal"])):
+        fftsignal = nrn_signal.get_neuron_current_fft_signal(time_domain_currents["signal"][i])
+        freq_signal_list.append(fftsignal)
+    freq_signal =  np.array(freq_signal_list)
+    # use full spectrum
+    nrn_signal.fft_freqs = fft_freqs
+    nrn_signal.fourier_coefficients = freq_signal
 
-def prepare_stimulation_signal(settings) -> FrequencyDomainSignal:
+    return nrn_signal
+
+def read_neuron_currents(settings) -> dict:
+    """
+    Read all subgroups in the HDF5 file whose names start with "Im" (Isyn must be included)
+    and append their data to a dictionary. If a group name is "TimeSteps...",
+    append its data to im_data["time"].
+
+    Returns
+    -------
+    dict
+        Dictionary containing Im datasets and time vector if present.
+    """
+    input_path = settings["PointModel"]["Pathway"]["FileName"]
+    neuron_currents_data = {}
+    with h5py.File(input_path, "r") as file:
+        for group in file.keys():
+            if group == "TimeSteps[us]":
+                neuron_currents_data["time"] = (np.array(file[group]))*1e-6  # convert to seconds
+            elif group == "TimeSteps[s]":
+                neuron_currents_data["time"] = np.array(file[group])
+            else:
+                for sub_group in file[group].keys():
+                    if sub_group.startswith("Im"):
+                        data = np.array(file[group][sub_group])
+                        neuron_currents = data # data delivered in nA
+                print(f"loaded {len(neuron_currents)} neuron current signals from h5 file")
+    if not neuron_currents.any():
+        raise ValueError("No neuron current signals found in the HDF5 file.")
+    neuron_currents_arr = np.array(neuron_currents)
+    neuron_currents_data["signal"] = neuron_currents_arr.reshape(
+        (neuron_currents.shape[0]*neuron_currents.shape[1], neuron_currents.shape[2])
+    ) # reshape to (n_signals, n_timepoints)
+    return neuron_currents_data
+
+def prepare_stimulation_signal(settings, nrn_signal) -> FrequencyDomainSignal:
     """Prepare the frequency-domain representation of stimulation signal."""
     signal_settings = settings["StimulationSignal"]
     signal_type = signal_settings["Type"]
     current_controlled = signal_settings["CurrentControlled"]
     octave_band_approximation = False
-    if signal_type == "Multisine":
+    if signal_type == "Im":
+        signal_type = "Multisine"
+        # all neuron signals share the same frequencies
+        fft_frequencies = nrn_signal.fft_freqs
+        spectrum_mode = signal_settings["SpectrumMode"]
+        if spectrum_mode == "OctaveBand":
+            octave_band_approximation = True
+        fft_coefficients = np.ones(len(fft_frequencies))
+        base_frequency = nrn_signal.frequency
+        cutoff_frequency = nrn_signal.cutoff_frequency
+        signal_length = nrn_signal.signal_length
+    elif signal_type == "Multisine":
         fft_frequencies = signal_settings["ListOfFrequencies"]
         fft_coefficients = np.ones(len(fft_frequencies))
         base_frequency = fft_frequencies[0]
@@ -441,7 +515,7 @@ def prepare_stimulation_signal(settings) -> FrequencyDomainSignal:
 
 
 def run_volume_conductor_model(
-    settings, volume_conductor, frequency_domain_signal, truncation_time=None
+    settings, volume_conductor, frequency_domain_signal,nrn_signal, truncation_time=None
 ):
     """TODO document.
 
@@ -474,6 +548,7 @@ def run_volume_conductor_model(
 
     vcm_timings = volume_conductor.run_full_analysis(
         frequency_domain_signal,
+        nrn_signal,
         compute_impedance,
         export_vtk,
         point_models=point_models,

@@ -19,6 +19,7 @@ from ossdbs.api import (
     load_images,
     prepare_dielectric_properties,
     prepare_solver,
+    prepare_neuron_currents,
     prepare_stimulation_signal,
     prepare_volume_conductor_model,
     run_stim_sets,
@@ -158,12 +159,16 @@ def main_run(input_settings: dict):
         volume_conductor = prepare_volume_conductor_model(
             settings, geometry, conductivity, solver
         )
-        frequency_domain_signal = prepare_stimulation_signal(settings)
+        nrn_signal = None
+        if settings["StimulationSignal"]["Type"] == "Im":
+            nrn_signal = prepare_neuron_currents(settings)       
+        frequency_domain_signal = prepare_stimulation_signal(settings, nrn_signal)
         if not settings["StimSets"]["Active"]:
             vcm_timings = run_volume_conductor_model(
                 settings,
                 volume_conductor,
                 frequency_domain_signal,
+                nrn_signal,
                 truncation_time=truncation_time,
             )
             _logger.info(f"Volume conductor timings:\n{pprint.pformat(vcm_timings)}")
