@@ -29,7 +29,13 @@ from ossdbs.utils.vtk_export import FieldSolution
 
 from .conductivity import ConductivityCF
 
-from ossdbs.stimulation_signals.utilities import retrieve_lfp_time_domain_signal_from_fft
+from ossdbs.stimulation_signals.utilities import (
+    retrieve_lfp_time_domain_signal_from_fft,
+    butter_bandpass,
+    butter_bandpass_filter,
+    lowpass,
+)
+
 
 _logger = logging.getLogger(__name__)
 
@@ -1177,7 +1183,26 @@ class VolumeConductor(ABC):
 
         # Use inverse FFT to retrieve time-domain signal using full spectrum nrn_signal
         lfp_time_domain = retrieve_lfp_time_domain_signal_from_fft(lfp_at_electrode_contact)
-        return lfp_time_domain, recording_contact
+
+        # filter LFP signal (Lempka2013 used bandpass filter from 1-100Hz, Maling2018 used lowpass filter from 0-100Hz)
+
+        # # bandpass filter between 1 Hz and 100 Hz
+        # filtered_lfp = butter_bandpass_filter(
+        #     lfp_time_domain,
+        #     lowcut=1,
+        #     highcut=100.0,
+        #     fs=1/nrn_signal.timestep,
+        #     order=6
+        # )
+        # lowpass filter with cutoff at 100 Hz
+        filtered_lfp = lowpass(
+            lfp_time_domain,
+            cutoff=100.0,
+            sample_rate=1/nrn_signal.timestep,
+            poles=6
+        )
+
+        return filtered_lfp, recording_contact
 
     def plot_solution_in_time_domain(self, time_domain_signal, param_id: str = "Signal", unit: str = "arb. unit") -> None:
         """Plot the time domain signal for every entry in time_domain_signal except 'time'."""

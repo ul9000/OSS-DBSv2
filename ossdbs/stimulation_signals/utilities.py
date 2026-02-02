@@ -5,6 +5,7 @@ import logging
 
 import numpy as np
 from scipy.fft import ifft, irfft
+from scipy.signal import butter, lfilter, sosfiltfilt
 
 _logger = logging.getLogger(__name__)
 
@@ -167,3 +168,20 @@ def get_positive_frequencies(
             np.conjugate(fft_coefficients[first_negative_freq + 1]),
         )
     return frequencies, fourier_coefficients
+
+def butter_bandpass(lowcut, highcut, fs, order=5):
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    b, a = butter(order, [low, high], btype='band')
+    return b, a
+
+def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
+    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
+
+def lowpass(data: np.ndarray, cutoff: float, sample_rate: float, poles: int = 5):
+    sos = butter(poles, cutoff, 'lowpass', fs=sample_rate, output='sos')
+    filtered_data = sosfiltfilt(sos, data)
+    return filtered_data
