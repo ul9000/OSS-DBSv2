@@ -34,8 +34,12 @@ test_input_cases_results.csv
 ngmesh.ini
 examples/StimulationSignalAPI/*.pdf
 x86_64/
-
+gillies*.h5*
+h5_structure_to_txt.py
 meshsizes.txt
+dataset_description.txt
+Rat_head_Andrea_cleaned.brep
+inputTestRat.json
 
 # Auto-generated version file
 ossdbs/_version.py
