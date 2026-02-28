@@ -54,11 +54,11 @@
   "MaterialDistribution": {
     "MRIPath": "rat_data/johnson/new_segmented_Atlas_GMWMCSF.nii.gz",
     "MRIMapping": {
-      "Gray matter": 1,
+      "Unknown": 0,
+      "CSF": 1,
       "White matter": 2,
-      "CSF": 3,
-      "Blood": 4,
-      "Unknown": 0
+      "Gray matter": 3,
+      "Blood": 4
     },
     "DiffusionTensorActive": false,
     "DTIPath": ""
@@ -102,14 +102,14 @@
     "Lattice": {
       "Active": false,
       "Center": {
-        "x[mm]": 10,
-        "y[mm]": 10,
-        "z[mm]": 10
+        "x[mm]": 22.95,
+        "y[mm]": 11.47,
+        "z[mm]": 8.1
       },
       "Shape": {
-        "x": 10,
-        "y": 10,
-        "z": 10
+        "x": 15,
+        "y": 15,
+        "z": 15
       },
       "Direction": {
         "x[mm]": 0,

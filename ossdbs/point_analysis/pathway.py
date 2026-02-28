@@ -366,8 +366,6 @@ class Pathway(PointModel):
                 idx_grid += axon_length
                 
             _logger.info(f"Outside the domain+csf+encap: {n_axons - counter}")
-            if counter == 0:
-                raise ValueError("No points inside the computational domain.")
         return lattice_mask_no_csf_encap, filtered_points
 
     def create_index(self, lattice: np.ndarray) -> np.ndarray:
