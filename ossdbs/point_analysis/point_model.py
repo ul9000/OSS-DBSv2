@@ -217,7 +217,7 @@ class PointModel(ABC):
         """Points inside encapsulation layer."""
         return self._inside_encap
 
-    def prepare_VCM_specific_evaluation(self, mesh: Mesh, conductivity_cf):
+    def prepare_VCM_specific_evaluation(self, mesh: Mesh, conductivity_cf, exclude_csf_encap=False):
         """Prepare data structure according to mesh.
 
         Parameters

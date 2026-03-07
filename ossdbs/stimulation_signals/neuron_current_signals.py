@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.fft import fft, fftfreq
+from scipy.fft import rfft, rfftfreq
 
 from .utilities import adjust_cutoff_frequency
 
@@ -42,8 +42,9 @@ class NeuronCurrentSignal:
             raise ValueError("Choose a timestep dt larger than zero.")
         if timings.shape[0] < timesteps:
             raise ValueError(f"Im.txt has fewer rows ({timings.shape[0]}) than the specified timesteps ({timesteps}).")
-        return fftfreq(len(timings), d=dt)
+        #return fftfreq(len(timings), d=dt)
+        return rfftfreq(len(timings), d=dt)
     
     def get_neuron_current_fft_signal(self, time_domain_signal):
-        fft_signal = fft(time_domain_signal)
+        fft_signal = rfft(time_domain_signal)
         return fft_signal  

@@ -450,7 +450,7 @@ class Pathway(PointModel):
         """
         raise NotImplementedError("Pathway results can not be stored in Nifti format.")
 
-    def prepare_VCM_specific_evaluation(self, mesh: Mesh, conductivity_cf, exclude_csf_encap):
+    def prepare_VCM_specific_evaluation(self, mesh: Mesh, conductivity_cf, exclude_csf_encap=False):
         """Prepare data structure according to mesh.
 
         Parameters

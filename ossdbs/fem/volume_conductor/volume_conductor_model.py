@@ -360,7 +360,7 @@ class VolumeConductor(ABC):
                     point_model.prepare_frequency_domain_data_structure(
                         len(self.signal.frequencies), out_of_core
                     )
-                                    # precompute lattice masks for LFP computation
+                # precompute lattice masks for LFP computation
                 if nrn_signal is not None:
                     lfp_signals = []
                     for mask, freq_lfp_signal in zip(point_model.lattice_mask, nrn_signal.fourier_coefficients):
@@ -1195,14 +1195,14 @@ class VolumeConductor(ABC):
         #     order=6
         # )
         # lowpass filter with cutoff at 100 Hz
-        filtered_lfp = lowpass(
-            lfp_time_domain,
-            cutoff=100.0,
-            sample_rate=1/nrn_signal.timestep,
-            poles=6
-        )
+        # filtered_lfp = lowpass(
+        #     lfp_time_domain,
+        #     cutoff=500.0,
+        #     sample_rate=1/nrn_signal.timestep,
+        #     poles=6
+        # )
 
-        return filtered_lfp, recording_contact
+        return lfp_time_domain, recording_contact
 
     def plot_solution_in_time_domain(self, time_domain_signal, param_id: str = "Signal", unit: str = "arb. unit") -> None:
         """Plot the time domain signal for every entry in time_domain_signal except 'time'."""

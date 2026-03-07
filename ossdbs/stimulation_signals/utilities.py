@@ -58,7 +58,7 @@ def retrieve_lfp_time_domain_signal_from_fft(fft_signal: np.ndarray) -> np.ndarr
     fft_signal: np.ndarray
         Frequency-domain signal
     """
-    signal = ifft(fft_signal, axis=0, workers=-1)
+    signal = irfft(fft_signal, axis=0, workers=-1)
     return signal.real
 
 
