@@ -408,14 +408,15 @@ class VolumeConductor(ABC):
             _logger.info("Launching reconstruction of LFP at electrode contact in time domain")
             timesteps = nrn_signal.simulation_times
             lfp_time_domain, recording_contact = self._pm_compute_lfp_at_contact(nrn_signal.fft_freqs, lfp_signals, point_models, nrn_signal)
-            lfp_at_contact = {}
-            lfp_at_contact["time"] = timesteps
-            lfp_at_contact[recording_contact] = (lfp_time_domain)
-            self.plot_solution_in_time_domain(lfp_at_contact, "LFP", "nV")
-            df = pd.DataFrame(lfp_at_contact)
-            df.to_csv(
-                os.path.join(self.output_path, "lfp_at_contact_in_time.csv"), index=False
-            )
+            if lfp_time_domain.size > 0:    
+                lfp_at_contact = {}
+                lfp_at_contact["time"] = timesteps
+                lfp_at_contact[recording_contact] = (lfp_time_domain)
+                self.plot_solution_in_time_domain(lfp_at_contact, "LFP", "nV")
+                df = pd.DataFrame(lfp_at_contact)
+                df.to_csv(
+                    os.path.join(self.output_path, "lfp_at_contact_in_time.csv"), index=False
+                )
 
         # export time domain solution if a proper signal has been passed
         _logger.info("Launching reconstruction of time domain")
@@ -1168,7 +1169,9 @@ class VolumeConductor(ABC):
                             f"{', '.join(recording_contacts)}")
         else:
             recording_contact = recording_contacts[0]
-
+        if len(frequency_domain_lfp_signals) == 0:
+            _logger.warning("No frequency domain LFP signals found for computing LFP at contact.")
+            return np.array([]), recording_contact
         #calculate the LFP at the recording contact
         lfp_share_freq_domain = {}
         lfp_share_freq_domain["frequency"] = frequencies

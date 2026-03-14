@@ -327,11 +327,9 @@ class PointModel(ABC):
     #     mesh: Mesh
     #         Mesh object on which VCM is defined
     #     """
-    #     print(mesh.ngsolvemesh.GetMaterials())
     #     encap_cf = mesh.ngsolvemesh.RegionCF(
     #         ngsolve.VOL, {"EncapsulationLayer_*": 1.0}, default=0
     #     )
-    #     print(encap_cf)
     #     ngmesh = mesh.ngsolvemesh
     #     x, y, z = self.lattice.T
     #     return np.isclose(encap_cf(ngmesh(x, y, z)), 1.0)
