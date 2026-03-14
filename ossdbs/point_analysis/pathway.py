@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import h5py
 import numpy as np
 import pandas as pd
+import xml.etree.ElementTree as ET
 
 from ossdbs.fem import Mesh
 from ossdbs.utils.collapse_vta import get_collapsed_VTA
@@ -615,3 +616,83 @@ class Pathway(PointModel):
                 index=False,
             )
         return
+    
+    def export_axons_vtu(self, filename):
+        """
+        Export axons (lists of 3D points) to a VTU file for ParaView.
+
+        Parameters
+        ----------
+        axons : list
+            List of axons, each axon is an array-like of shape (N,3)
+        filename : str
+            Output .vtu file path
+        """
+        axons = []
+
+        for population in self._populations:
+            for axon in population.axons:
+                if axon.status == 0:
+                    axons.append(axon.points)
+
+        points = []
+        connectivity = []
+        offsets = []
+
+        point_counter = 0
+
+        for axon in axons:
+            axon = np.asarray(axon)
+
+            if len(axon) < 2:
+                continue
+
+            points.extend(axon)
+
+            connectivity.extend(range(point_counter, point_counter + len(axon)))
+            point_counter += len(axon)
+
+            offsets.append(point_counter)
+
+        points = np.array(points)
+
+        root = ET.Element(
+            "VTKFile",
+            type="UnstructuredGrid",
+            version="0.1",
+            byte_order="LittleEndian",
+        )
+
+        grid = ET.SubElement(root, "UnstructuredGrid")
+        piece = ET.SubElement(
+            grid,
+            "Piece",
+            NumberOfPoints=str(len(points)),
+            NumberOfCells=str(len(offsets)),
+        )
+
+        # Points
+        points_tag = ET.SubElement(piece, "Points")
+        data = ET.SubElement(
+            points_tag,
+            "DataArray",
+            type="Float64",
+            NumberOfComponents="3",
+            format="ascii",
+        )
+        data.text = "\n" + " ".join(map(str, points.flatten()))
+
+        # Cells
+        cells = ET.SubElement(piece, "Cells")
+
+        conn = ET.SubElement(cells, "DataArray", type="Int32", Name="connectivity", format="ascii")
+        conn.text = "\n" + " ".join(map(str, connectivity))
+
+        offs = ET.SubElement(cells, "DataArray", type="Int32", Name="offsets", format="ascii")
+        offs.text = "\n" + " ".join(map(str, offsets))
+
+        types = ET.SubElement(cells, "DataArray", type="UInt8", Name="types", format="ascii")
+        types.text = "\n" + " ".join(["4"] * len(offsets))  # 4 = VTK_POLY_LINE
+
+        tree = ET.ElementTree(root)
+        tree.write(filename, encoding="utf-8", xml_declaration=True)

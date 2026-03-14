@@ -360,6 +360,7 @@ class VolumeConductor(ABC):
                     point_model.prepare_frequency_domain_data_structure(
                         len(self.signal.frequencies), out_of_core
                     )
+                    point_model.export_axons_vtu(f"{self.output_path}/axons.vtu")
                 # precompute lattice masks for LFP computation
                 if nrn_signal is not None:
                     lfp_signals = []
@@ -1194,13 +1195,13 @@ class VolumeConductor(ABC):
         #     fs=1/nrn_signal.timestep,
         #     order=6
         # )
-        # lowpass filter with cutoff at 100 Hz
-        # filtered_lfp = lowpass(
-        #     lfp_time_domain,
-        #     cutoff=500.0,
-        #     sample_rate=1/nrn_signal.timestep,
-        #     poles=6
-        # )
+        # lowpass filter with cutoff at 500 Hz
+        filtered_lfp = lowpass(
+            lfp_time_domain,
+            cutoff=500.0,
+            sample_rate=1/nrn_signal.timestep,
+            poles=6
+        )
 
         return lfp_time_domain, recording_contact
 

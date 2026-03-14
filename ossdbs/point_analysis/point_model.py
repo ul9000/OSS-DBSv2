@@ -319,6 +319,26 @@ class PointModel(ABC):
         if self.tmp_hdf5_file is not None:
             self.tmp_hdf5_file.close()
 
+    # def get_points_in_encapsulation_layer(self, mesh: Mesh) -> np.ndarray:
+    #     """Return mask for points in encapsulation layer.
+
+    #     Parameters
+    #     ----------
+    #     mesh: Mesh
+    #         Mesh object on which VCM is defined
+    #     """
+    #     print(mesh.ngsolvemesh.GetMaterials())
+    #     encap_cf = mesh.ngsolvemesh.RegionCF(
+    #         ngsolve.VOL, {"EncapsulationLayer_*": 1.0}, default=0
+    #     )
+    #     print(encap_cf)
+    #     ngmesh = mesh.ngsolvemesh
+    #     x, y, z = self.lattice.T
+    #     return np.isclose(encap_cf(ngmesh(x, y, z)), 1.0)
+
+    # as the wildcard EncapsulationLayer_* in the above function does not work, 
+    # we need to find the materials that correspond to the encapsulation layer 
+    # first and then create the region CF with the correct material names. 
     def get_points_in_encapsulation_layer(self, mesh: Mesh) -> np.ndarray:
         """Return mask for points in encapsulation layer.
 
@@ -327,8 +347,14 @@ class PointModel(ABC):
         mesh: Mesh
             Mesh object on which VCM is defined
         """
+        materials = mesh.ngsolvemesh.GetMaterials()
+        encap_regions = {
+            m: 1.0 for m in materials if m.startswith("EncapsulationLayer_")
+        }
         encap_cf = mesh.ngsolvemesh.RegionCF(
-            ngsolve.VOL, {"EncapsulationLayer_*": 1.0}, default=0
+            ngsolve.VOL,
+            encap_regions,
+            default=0
         )
         ngmesh = mesh.ngsolvemesh
         x, y, z = self.lattice.T
