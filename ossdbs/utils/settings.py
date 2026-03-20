@@ -96,6 +96,7 @@ class Settings:
             "CutoffFrequency": 1e6,
             "CurrentControlled": False,
             "Timestep[s]": 0.0,
+            "LFP_radius[mm]": None,
         },
         "Solver": {
             "Type": "CG",

@@ -419,7 +419,8 @@ def prepare_neuron_currents(settings):
     timestep = signal_settings["Timestep[s]"]
     base_frequency = time_domain_currents["time"].shape[0] / timestep
     cutoff_frequency = settings["StimulationSignal"]["CutoffFrequency"]
-    nrn_signal = NeuronCurrentSignal(base_frequency, cutoff_frequency, timestep, time_domain_currents["time"])
+    LFP_radius = signal_settings["LFP_radius[mm]"]
+    nrn_signal = NeuronCurrentSignal(base_frequency, cutoff_frequency, timestep, time_domain_currents["time"], LFP_radius)
     fft_freqs = nrn_signal.get_neuron_current_fft_freqs(
         nrn_signal.cutoff_frequency, time_domain_currents["time"]
     )
