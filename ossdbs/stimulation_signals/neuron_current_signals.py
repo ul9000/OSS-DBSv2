@@ -12,6 +12,7 @@ class NeuronCurrentSignal:
         cutoff_frequency: float,
         timestep: float,
         simulation_times: list[np.ndarray] = None,
+        LFP_radius: float = None,
 
     ):
         self.frequency = frequency
@@ -21,6 +22,7 @@ class NeuronCurrentSignal:
         self.fft_freqs = None
         self.fourier_coefficients = None
         self.signal_length = None
+        self.LFP_radius = LFP_radius
 
     def get_neuron_current_fft_freqs(self, cutoff_frequency: float, timings) -> np.ndarray:
         """FFT spectrum for all neuron current time-domain signals.

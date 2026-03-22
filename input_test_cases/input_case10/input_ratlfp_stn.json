@@ -70,7 +70,8 @@
     "Type": "Im",
     "CurrentControlled": true,
     "SpectrumMode": "OctaveBand",
-    "Timestep[s]": 0.001
+    "Timestep[s]": 0.0001,
+    "LFP_radius[mm]": 0.1
   },
   "Mesh": {
     "LoadMesh": false,
@@ -97,7 +98,7 @@
   "PointModel": {
     "Pathway": {
       "Active": true,
-      "FileName": "../../input_files/gillies_125stn_network.h5"
+      "FileName": "../../input_files/gillies_50_im_filtered.h5"
     },
     "Lattice": {
       "Active": false,

@@ -4,6 +4,7 @@
 import logging
 import os
 from dataclasses import dataclass
+from types import NoneType
 
 import h5py
 import numpy as np
@@ -297,8 +298,8 @@ class Pathway(PointModel):
 
         return filtered_points
 
-    def filter_csf_encap(
-        self, inside_csf: np.ndarray, inside_encap: np.ndarray
+    def filter_csf_encap_radius(
+        self, inside_csf: np.ndarray, inside_encap: np.ndarray, outside_radius: np.ndarray
     ) -> None:
         """Change axon status if a single point of the axon is
         within the CSF or encapsulation layer.
@@ -325,13 +326,16 @@ class Pathway(PointModel):
                         if inside_csf[idx_axon + idx]:
                             axon.status = -2  # set status -2 for inside csf
                             break
+                        if outside_radius[idx_axon + idx]:
+                            axon.status = -3  # set status -3 for outside radius
+                            break
                     idx_axon += axon_length
         _logger.info("Marked axons inside CSF and encapsulation layer")
         return
     
-    def remove_axons_in_csf_encap(self, grid_pts: np.ma.MaskedArray) -> np.ndarray:
+    def remove_axons_in_csf_encap_radius(self, grid_pts: np.ma.MaskedArray) -> np.ndarray:
         x, y, z = grid_pts.T
-        lattice_mask_no_csf_encap = np.zeros_like(self.lattice_mask, dtype=bool)
+        lattice_mask_no_csf_encap_radius = np.zeros_like(self.lattice_mask, dtype=bool)
         # compute number of points after removing axons in csf, encap, and outside domain
         n_points = 0
         for population in self._populations:
@@ -361,13 +365,13 @@ class Pathway(PointModel):
                     filtered_points[idx_points : idx_points + axon_length, 2] = z.data[
                         idx_grid : idx_grid + axon_length
                     ]
-                    lattice_mask_no_csf_encap[idx_maskpoints:idx_maskpoints+axon_length, :] = True
+                    lattice_mask_no_csf_encap_radius[idx_maskpoints:idx_maskpoints+axon_length, :] = True
                     idx_points += axon_length
                     idx_maskpoints += axon_length
                 idx_grid += axon_length
                 
-            _logger.info(f"Outside the domain+csf+encap: {n_axons - counter}")
-        return lattice_mask_no_csf_encap, filtered_points
+            _logger.info(f"Outside the domain, csf, encap, radius: {n_axons - counter}")
+        return lattice_mask_no_csf_encap_radius, filtered_points
 
     def create_index(self, lattice: np.ndarray) -> np.ndarray:
         """Create index for each point to the matching axon.
@@ -451,7 +455,7 @@ class Pathway(PointModel):
         """
         raise NotImplementedError("Pathway results can not be stored in Nifti format.")
 
-    def prepare_VCM_specific_evaluation(self, mesh: Mesh, conductivity_cf, exclude_csf_encap=False):
+    def prepare_VCM_specific_evaluation(self, mesh: Mesh, conductivity_cf, exclude_csf_encap=False, radius=None, center=None):
         """Prepare data structure according to mesh.
 
         Parameters
@@ -473,9 +477,10 @@ class Pathway(PointModel):
         self._lattice = self.filter_for_geometry(grid_pts)
         self._inside_csf = self.get_points_in_csf(mesh, conductivity_cf)
         self._inside_encap = self.get_points_in_encapsulation_layer(mesh)
+        self._outside_radius = self.get_points_outside_radius(radius, center) if radius is not None else np.zeros_like(self._inside_csf, dtype=bool)
 
         # mark complete axons and log how many axons were finally seeded
-        self.filter_csf_encap(self.inside_csf, self.inside_encap)
+        self.filter_csf_encap_radius(self.inside_csf, self.inside_encap, self._outside_radius)
 
         total_axons = sum(len(pop.axons) for pop in self._populations)
         seeded_axons = sum(
@@ -486,10 +491,10 @@ class Pathway(PointModel):
         # create index for axons
         self._axon_index = self.create_index(self.lattice)
 
-        self.lattice_mask_no_csf_encap, self.lattice_no_csf_encap = self.remove_axons_in_csf_encap(grid_pts)
-        self._axon_index_no_csf_encap = self.create_index(self.lattice_no_csf_encap)
+        self.lattice_mask_no_csf_encap_radius, self.lattice_no_csf_encap_radius = self.remove_axons_in_csf_encap_radius(grid_pts)
+        self._axon_index_no_csf_encap_radius = self.create_index(self.lattice_no_csf_encap_radius)
         if exclude_csf_encap:
-            self.exclude_csf_encap(self.inside_csf, self.inside_encap)
+            self.exclude_csf_encap_radius(self.inside_csf, self.inside_encap, self._outside_radius)
 
     def export_field_at_frequency(
         self,

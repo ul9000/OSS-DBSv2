@@ -110,7 +110,7 @@ class PointModel(ABC):
         """
         raise NotImplementedError("Filtering of points not implemented.")
     
-    def exclude_csf_encap(self, inside_csf: np.ndarray, inside_encap: np.ndarray):
+    def exclude_csf_encap_radius(self, inside_csf: np.ndarray, inside_encap: np.ndarray, outside_radius: np.ndarray):
         """Remove points in CSF or encapsulation layer.
 
         Parameters
@@ -119,17 +119,20 @@ class PointModel(ABC):
             list of points in csf
         inside_encap: np.ndarray
             list of points in encapsulation layer
+        outside_radius: np.ndarray
+            list of points outside a certain radius from a predefined center
         """
-        self._lattice = self.lattice_no_csf_encap
+        self._lattice = self.lattice_no_csf_encap_radius
         #self.lattice = self.lattice_no_csf_encap
-        self._lattice_mask = self.lattice_mask_no_csf_encap
+        self._lattice_mask = self.lattice_mask_no_csf_encap_radius
         #self.lattice_mask = self.lattice_mask_no_csf_encap
-        self._axon_index = self._axon_index_no_csf_encap
+        self._axon_index = self._axon_index_no_csf_encap_radius
         #self.axon_index = self._axon_index_no_csf_encap
         self._inside_csf = np.zeros((self.lattice.shape[0],1), dtype=bool)
         #self.inside_csf = np.zeros(self.lattice.shape[0], dtype=bool)
         self._inside_encap = np.zeros((self.lattice.shape[0],1), dtype=bool)
         #self.inside_encap = np.zeros(self.lattice.shape[0], dtype=bool)
+
 
     @abstractmethod
     def save_as_nifti(
@@ -378,6 +381,24 @@ class PointModel(ABC):
         return np.isclose(
             material_distribution(ngmesh(x, y, z)), conductivity_cf.materials["CSF"]
         )
+    def get_points_outside_radius(self, radius: float, center: np.ndarray) -> np.ndarray:
+        """Return mask for points outside a certain radius from the origin.
+
+        Parameters
+        ----------
+        mesh: Mesh
+            Mesh object on which VCM is defined
+        radius: float
+            Radius in mm
+        center: np.ndarray
+            Center of the radius
+
+        Notes
+        -----
+        TODO Type hint
+        """
+        x, y, z = self.lattice.T
+        return np.sqrt((x - center[0])**2 + (y - center[1])**2 + (z - center[2])**2) > radius
 
     @property
     def output_path(self):

@@ -128,7 +128,7 @@ class VolumeConductor(ABC):
     def run_full_analysis(
         self,
         frequency_domain_signal: FrequencyDomainSignal,
-        nrn_signal: list[NeuronCurrentSignal] = None,
+        nrn_signal: NeuronCurrentSignal = None,
         compute_impedance: bool = False,
         export_vtk: bool = False,
         point_models: list[PointModel] | None = None,
@@ -200,6 +200,7 @@ class VolumeConductor(ABC):
         exclude_csf_encap = False
         if nrn_signal is not None:
             exclude_csf_encap = True
+            nrn_center = self.model_geometry._electrodes[0]._position+ np.array([0, 0, 0.125])  # shift center to middle of contact 0, TODO make this a parameter
 
         # always compute impedance for CC with 2 contacts
         if self.current_controlled and len(self.contacts.active) == 2:
@@ -355,7 +356,7 @@ class VolumeConductor(ABC):
                 for point_model in point_models:
                     point_model.output_path = self.output_path
                     point_model.prepare_VCM_specific_evaluation(
-                        self.mesh, self.conductivity_cf, exclude_csf_encap
+                        self.mesh, self.conductivity_cf, exclude_csf_encap, nrn_signal.LFP_radius, nrn_center
                     )
                     point_model.prepare_frequency_domain_data_structure(
                         len(self.signal.frequencies), out_of_core
