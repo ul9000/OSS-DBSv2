@@ -1205,8 +1205,9 @@ class VolumeConductor(ABC):
             sample_rate=1/nrn_signal.timestep,
             poles=6
         )
-
-        return lfp_time_domain, recording_contact
+        rms = np.sqrt(np.mean(filtered_lfp**2))
+        _logger.info(f"RMS of filtered LFP at contact {recording_contact}: {rms:.3f}")
+        return filtered_lfp, recording_contact
 
     def plot_solution_in_time_domain(self, time_domain_signal, param_id: str = "Signal", unit: str = "arb. unit") -> None:
         """Plot the time domain signal for every entry in time_domain_signal except 'time'."""
