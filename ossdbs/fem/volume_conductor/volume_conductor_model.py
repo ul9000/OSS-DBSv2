@@ -7,6 +7,7 @@ import logging
 import os
 import time
 from abc import ABC, abstractmethod
+import csv
 
 import ngsolve
 import numpy as np
@@ -31,9 +32,7 @@ from .conductivity import ConductivityCF
 
 from ossdbs.stimulation_signals.utilities import (
     retrieve_lfp_time_domain_signal_from_fft,
-    butter_bandpass,
-    butter_bandpass_filter,
-    lowpass,
+    process_lfp
 )
 
 
@@ -413,10 +412,24 @@ class VolumeConductor(ABC):
                 lfp_at_contact = {}
                 lfp_at_contact["time"] = timesteps
                 lfp_at_contact[recording_contact] = (lfp_time_domain)
-                self.plot_solution_in_time_domain(lfp_at_contact, "LFP", "nV")
+                lfp_at_contact[recording_contact] = lfp_at_contact[recording_contact]/1000  # convert from nV to uV
+                self.plot_solution_in_time_domain(lfp_at_contact, "LFP", "$\mu$V")
+                for key in lfp_at_contact:
+                    if key == "time":
+                        continue
+                    if key == "E1C1":
+                        contact = "c1"
+                    elif key == "E1C2":
+                        contact = "c2"
+                    elif key == "E1C3":
+                        contact = "c3"
+                    elif key == "E1C4":
+                        contact = "c4"
+                    else:
+                        raise ValueError(f"Unexpected contact name {key} in lfp_at_contact")
                 df = pd.DataFrame(lfp_at_contact)
                 df.to_csv(
-                    os.path.join(self.output_path, "lfp_at_contact_in_time.csv"), index=False
+                    os.path.join(self.output_path, f"{contact}_lfp_at_contact_in_time_{nrn_signal.LFP_radius}.csv"), index=False
                 )
 
         # export time domain solution if a proper signal has been passed
@@ -1157,6 +1170,21 @@ class VolumeConductor(ABC):
             self.mesh.refine_by_material_cf(
                 self.conductivity_cf.material_distribution(self.mesh)
             )
+
+    def cpe_scaling_factor(self, frequencies) -> float:
+        """Calculate scaling factor for CPE model."""
+        K = 2.14 * 1e6  # CPE constant Ohm*mm²*s^-beta (OSSDBS uses mm), from Karthik2025 for PtIr unstimulated eletrode
+        beta = 0.67 # from Karthik2025 for PtIr unstimulated eletrode
+        Z_amp = 1e6  # Amplitude of electrode impedance at low frequencies
+        omega = 2 * np.pi * frequencies
+        Z_cpe = np.zeros_like(omega, dtype=complex)
+        for i in range(1,len(omega)):
+            Z_cpe[i] = np.array(K * (1j * omega[i]) ** -beta)  # CPE impedance at each frequency
+        Z_scale = np.array([Z_amp / (Z_amp + Z) for Z in Z_cpe])  # Scaling factor for each frequency
+        print(f"Z_cpe at {frequencies[0]} Hz: {Z_cpe}")
+        print(f"Z_scale at {frequencies[0]} Hz: {Z_scale}")
+        return Z_scale
+
     def _pm_compute_lfp_at_contact(self, frequencies, frequency_domain_lfp_signals, point_models, nrn_signal=None):
         """Compute local field potential caused by the point models at the recording electrode contact ."""
 
@@ -1179,36 +1207,37 @@ class VolumeConductor(ABC):
         lfp_at_electrode_contact = np.zeros_like(frequency_domain_lfp_signals[0])
         # For each compartment, compute its contribution
         # and sum the contributions from all neurons for each floating contact
+        # for idx, point_model in enumerate(point_models):
+        #     for i in range (len(frequency_domain_lfp_signals)):
+        #         lfp_share_freq_domain[f"comp_{i}"] = (
+        #             point_model.tmp_potential_freq_domain[i,:] *
+        #             frequency_domain_lfp_signals[i] # * cpe_scaling_factor(frequencies)
+        #         )
+        #         lfp_at_electrode_contact += lfp_share_freq_domain[f"comp_{i}"]
         for idx, point_model in enumerate(point_models):
             lfp_share_freq_domain[f"point_model_{idx}"] = (
                 point_model.tmp_potential_freq_domain[:,:frequency_domain_lfp_signals[0].size] *
                 frequency_domain_lfp_signals
             ).sum(axis=0)
             lfp_at_electrode_contact += lfp_share_freq_domain[f"point_model_{idx}"]
+            lfp_at_electrode_contact = lfp_at_electrode_contact * self.cpe_scaling_factor(frequencies)
 
         # Use inverse FFT to retrieve time-domain signal using full spectrum nrn_signal
         lfp_time_domain = retrieve_lfp_time_domain_signal_from_fft(lfp_at_electrode_contact)
 
-        # filter LFP signal (Lempka2013 used bandpass filter from 1-100Hz, Maling2018 used lowpass filter from 0-100Hz)
-
-        # # bandpass filter between 1 Hz and 100 Hz
-        # filtered_lfp = butter_bandpass_filter(
+        # applybandpass filter between 2 Hz and 500 Hz and 50 Hz notch filter like Sridhar2025
+        # lfp_time_domain = process_lfp(
         #     lfp_time_domain,
-        #     lowcut=1,
-        #     highcut=100.0,
-        #     fs=1/nrn_signal.timestep,
-        #     order=6
+        #     fs=1/nrn_signal.timestep
         # )
-        # lowpass filter with cutoff at 500 Hz
-        filtered_lfp = lowpass(
-            lfp_time_domain,
-            cutoff=500.0,
-            sample_rate=1/nrn_signal.timestep,
-            poles=6
-        )
-        rms = np.sqrt(np.mean(filtered_lfp**2))
-        _logger.info(f"RMS of filtered LFP at contact {recording_contact}: {rms:.3f}")
-        return filtered_lfp, recording_contact
+        return lfp_time_domain, recording_contact
+
+    def write_csv(self, file_name, value_to_add):
+        """Write RMS data to CSV file."""
+        path = os.path.join(self.output_path, file_name + ".csv")
+        with open(path, mode="a", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([value_to_add])
 
     def plot_solution_in_time_domain(self, time_domain_signal, param_id: str = "Signal", unit: str = "arb. unit") -> None:
         """Plot the time domain signal for every entry in time_domain_signal except 'time'."""

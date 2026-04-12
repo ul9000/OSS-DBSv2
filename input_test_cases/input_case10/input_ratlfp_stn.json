@@ -1,129 +1,129 @@
 {
-  "BrainRegion": {
-    "Center": {
-      "x[mm]": 22.95,
-      "y[mm]": 11.47,
-      "z[mm]": 8.1
-    },
-    "Dimension": {
-      "x[mm]": 20.0,
-      "y[mm]": 20.0,
-      "z[mm]": 20.0
-    },
-    "Shape": "Sphere"
-  },
-  "Electrodes": [
-    {
-      "Name": "MicroProbesSNEX100",
-      "PathToCustomParameters": "",
-      "Rotation[Degrees]": 0.0,
-      "Direction": {
-        "x[mm]": 0.0,
-        "y[mm]": 0.0,
-        "z[mm]": 1.0
-      },
-      "TipPosition": {
-        "x[mm]": 22.95,
-        "y[mm]": 11.47,
-        "z[mm]": 8.1
-      },
-      "Contacts": [
-        {
-          "Contact_ID": 1,
-          "Active": true,
-          "Current[A]": 1.0,
-          "Voltage[V]": 1.0,
-          "Floating": false
+    "BrainRegion": {
+        "Center": {
+            "x[mm]": 22.95,
+            "y[mm]": 11.47,
+            "z[mm]": 8.1
         },
+        "Dimension": {
+            "x[mm]": 20.0,
+            "y[mm]": 20.0,
+            "z[mm]": 20.0
+        },
+        "Shape": "Sphere"
+    },
+    "Electrodes": [
         {
-          "Contact_ID": 2,
-          "Active": false,
-          "Current[A]": 0.0,
-          "Voltage[V]": 0.0,
-          "Floating": false
+            "Name": "MicroProbesSNEX100",
+            "PathToCustomParameters": "",
+            "Rotation[Degrees]": 0.0,
+            "Direction": {
+                "x[mm]": 0.0,
+                "y[mm]": 0.0,
+                "z[mm]": 1.0
+            },
+            "TipPosition": {
+                "x[mm]": 22.95,
+                "y[mm]": 11.47,
+                "z[mm]": 8.1
+            },
+            "Contacts": [
+                {
+                    "Contact_ID": 1,
+                    "Active": true,
+                    "Current[A]": 1.0,
+                    "Voltage[V]": 1.0,
+                    "Floating": false
+                },
+                {
+                    "Contact_ID": 2,
+                    "Active": false,
+                    "Current[A]": 0.0,
+                    "Voltage[V]": 0.0,
+                    "Floating": false
+                }
+            ],
+            "EncapsulationLayer": {
+                "Thickness[mm]": 0.0,
+                "Material": "Gray matter",
+                "DielectricModel": "ColeCole4",
+                "MaxMeshSize": 0.1
+            }
         }
-      ],
-      "EncapsulationLayer": {
-        "Thickness[mm]": 0.0,
-        "Material": "Blood",
-        "DielectricModel": "ColeCole4",
-        "MaxMeshSize": 0.1
-      }
-    }
-  ],
-  "MaterialDistribution": {
-    "MRIPath": "rat_data/johnson/new_segmented_Atlas_GMWMCSF.nii.gz",
-    "MRIMapping": {
-      "Unknown": 0,
-      "CSF": 1,
-      "White matter": 2,
-      "Gray matter": 3,
-      "Blood": 4
+    ],
+    "MaterialDistribution": {
+        "MRIPath": "rat_data/johnson/new_segmented_Atlas_GMWMCSF.nii.gz",
+        "MRIMapping": {
+            "Unknown": 0,
+            "CSF": 1,
+            "White matter": 2,
+            "Gray matter": 3,
+            "Blood": 4
+        },
+        "DiffusionTensorActive": true,
+        "DTIPath": "../../input_files/DTI_truncated_FSL_order_Norm_mapping.nii.gz"
     },
-    "DiffusionTensorActive": false,
-    "DTIPath": ""
-  },
-  "DielectricModel": {
-    "Type": "ColeCole4"
-  },
-  "StimulationSignal": {
-    "Type": "Im",
-    "CurrentControlled": true,
-    "SpectrumMode": "OctaveBand",
-    "Timestep[s]": 0.0001,
-    "LFP_radius[mm]": 0.1
-  },
-  "Mesh": {
-    "LoadMesh": false,
-    "MeshElementOrder": 2,
-    "MeshingHypothesis": {
-      "Type": "Fine",
-      "MaxMeshSize": 1
+    "DielectricModel": {
+        "Type": "ColeCole4"
     },
-    "MeshSize": {
-      "Edges": {},
-      "Faces": {},
-      "Volumes": {}
+    "StimulationSignal": {
+        "Type": "Im",
+        "CurrentControlled": true,
+        "SpectrumMode": "OctaveBand",
+        "Timestep[s]": 0.0001,
+        "LFP_radius[mm]": 1.0
     },
-    "SaveMesh": false
-  },
-  "Solver": {
-    "Type": "CG",
-    "Preconditioner": "bddc",
-    "PreconditionerKwargs": {},
-    "PrintRates": true,
-    "MaximumSteps": 200,
-    "Precision": 1e-8
-  },
-  "PointModel": {
-    "Pathway": {
-      "Active": true,
-      "FileName": "../../input_files/gillies_50_im_filtered.h5"
+    "Mesh": {
+        "LoadMesh": false,
+        "MeshElementOrder": 2,
+        "MeshingHypothesis": {
+            "Type": "Fine",
+            "MaxMeshSize": 1
+        },
+        "MeshSize": {
+            "Edges": {},
+            "Faces": {},
+            "Volumes": {}
+        },
+        "SaveMesh": false
     },
-    "Lattice": {
-      "Active": false,
-      "Center": {
-        "x[mm]": 22.95,
-        "y[mm]": 11.47,
-        "z[mm]": 8.1
-      },
-      "Shape": {
-        "x": 15,
-        "y": 15,
-        "z": 15
-      },
-      "Direction": {
-        "x[mm]": 0,
-        "y[mm]": 0,
-        "z[mm]": 1
-      },
-      "PointDistance[mm]": 1
-    }
-  },
-  "EQSMode": false,
-  "FEMOrder": 2,
-  "OutputPath": "./Results_ratLFP",
-  "ComputeImpedance": true,
-  "ExportVTK": true,
-  "ExportElectrode": true
+    "Solver": {
+        "Type": "CG",
+        "Preconditioner": "bddc",
+        "PreconditionerKwargs": {},
+        "PrintRates": true,
+        "MaximumSteps": 200,
+        "Precision": 1e-08
+    },
+    "PointModel": {
+        "Pathway": {
+            "Active": true,
+            "FileName": "../../input_files/I_unfiltered_1.h5"
+        },
+        "Lattice": {
+            "Active": false,
+            "Center": {
+                "x[mm]": 22.95,
+                "y[mm]": 11.47,
+                "z[mm]": 8.1
+            },
+            "Shape": {
+                "x": 15,
+                "y": 15,
+                "z": 15
+            },
+            "Direction": {
+                "x[mm]": 0,
+                "y[mm]": 0,
+                "z[mm]": 1
+            },
+            "PointDistance[mm]": 1
+        }
+    },
+    "EQSMode": false,
+    "FEMOrder": 2,
+    "OutputPath": "./1_bipolar_lfp_dti_noencap",
+    "ComputeImpedance": true,
+    "ExportVTK": true,
+    "ExportElectrode": true
 }

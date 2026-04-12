@@ -299,7 +299,7 @@ class Pathway(PointModel):
         return filtered_points
 
     def filter_csf_encap_radius(
-        self, inside_csf: np.ndarray, inside_encap: np.ndarray, outside_radius: np.ndarray
+        self, inside_csf: np.ndarray, inside_encap: np.ndarray, outside_radius: np.ndarray, inside_unknown: np.ndarray
     ) -> None:
         """Change axon status if a single point of the axon is
         within the CSF or encapsulation layer.
@@ -329,8 +329,11 @@ class Pathway(PointModel):
                         if outside_radius[idx_axon + idx]:
                             axon.status = -3  # set status -3 for outside radius
                             break
+                        if inside_unknown[idx_axon + idx]:
+                            axon.status = -4  # set status -4 for inside unknown
+                            break
                     idx_axon += axon_length
-        _logger.info("Marked axons inside CSF and encapsulation layer")
+        _logger.info("Marked axons inside CSF, encapsulation layer, unknown region, and outside radius.")
         return
     
     def remove_axons_in_csf_encap_radius(self, grid_pts: np.ma.MaskedArray) -> np.ndarray:
@@ -478,10 +481,10 @@ class Pathway(PointModel):
         self._inside_csf = self.get_points_in_csf(mesh, conductivity_cf)
         self._inside_encap = self.get_points_in_encapsulation_layer(mesh)
         self._outside_radius = self.get_points_outside_radius(radius, center) if radius is not None else np.zeros_like(self._inside_csf, dtype=bool)
+        self._inside_unknown = self.get_points_in_unknown(mesh, conductivity_cf)
 
         # mark complete axons and log how many axons were finally seeded
-        self.filter_csf_encap_radius(self.inside_csf, self.inside_encap, self._outside_radius)
-
+        self.filter_csf_encap_radius(self.inside_csf, self.inside_encap, self._outside_radius, self._inside_unknown)
         total_axons = sum(len(pop.axons) for pop in self._populations)
         seeded_axons = sum(
             sum(axon.status == 0 for axon in pop.axons) for pop in self._populations

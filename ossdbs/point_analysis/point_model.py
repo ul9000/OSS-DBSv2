@@ -381,6 +381,28 @@ class PointModel(ABC):
         return np.isclose(
             material_distribution(ngmesh(x, y, z)), conductivity_cf.materials["CSF"]
         )
+    
+    def get_points_in_unknown(self, mesh: Mesh, conductivity_cf) -> np.ndarray:
+        """Return mask for points in unknown material.
+
+        Parameters
+        ----------
+        mesh: Mesh
+            Mesh object on which VCM is defined
+        conductivity_cf: ConductivityCF
+            Conductivity function that hold material info
+
+        Notes
+        -----
+        TODO Type hint
+        """
+        material_distribution = conductivity_cf.material_distribution(mesh)
+        ngmesh = mesh.ngsolvemesh
+        x, y, z = self.lattice.T
+        return np.isclose(
+            material_distribution(ngmesh(x, y, z)), conductivity_cf.materials["Unknown"]
+        )
+    
     def get_points_outside_radius(self, radius: float, center: np.ndarray) -> np.ndarray:
         """Return mask for points outside a certain radius from the origin.
 
