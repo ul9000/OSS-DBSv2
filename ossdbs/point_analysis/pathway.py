@@ -128,15 +128,21 @@ class Pathway(PointModel):
                 if sub_group.startswith("axon")
             ]
         else:
-            return [
-                self.Axon(
-                    sub_group,
-                    np.array(file[group][sub_group]),
-                    0,
-                    file[group][sub_group].attrs["inx"],
-                )
-                for sub_group in file[group].keys()
-            ]
+            axons = []
+            for sub_group in file[group].keys():
+                dataset = file[group][sub_group]
+                if "inx" in dataset.attrs:
+                    orig_inx = dataset.attrs["inx"]
+                else:
+                    _logger.debug(
+                        "Dataset %s/%s has no 'inx' attribute; falling back to the "
+                        "axon index encoded in the dataset name.",
+                        group,
+                        sub_group,
+                    )
+                    orig_inx = int(sub_group[4:]) if sub_group.startswith("axon") else 0
+                axons.append(self.Axon(sub_group, np.array(dataset), 0, orig_inx))
+            return axons
 
     def _initialize_coordinates(self) -> np.ndarray:
         return np.concatenate(

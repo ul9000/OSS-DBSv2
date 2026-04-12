@@ -1,48 +1,56 @@
-# Ignore folder
+# Ignore Python-related files and folders
 __pycache__/
+*.pyc
+*.egg-info/
 .env/
 venv/
 .tox/
+
+# Auto-generated version file
+ossdbs/_version.py
+
+# Ignore IDE/editor-specific files
 .vscode/
-htmlcov/
+.idea/
+*.swp
+
+# Ignore build and coverage files
 build/
 dist/
-*.egg-info/
-_build/
-docs/._*
-Results*/
-.idea/
-.ipynb_checkpoints/
-
-# Ignore file
-*.vol.gz
-*.pyc
+htmlcov/
 .coverage
 .coveragerc
-*.vtu
-.DS_Store
-ng.ini
-*.swp
+
+# Ignore documentation build artifacts
+_build/
+docs/._*
+
+# Ignore results and temporary files
+Results*/
+.ipynb_checkpoints/
+test_input_cases_results.csv
 impedance.csv
-*checkpoints.ipynb
-*.nii.gz
-*.nii
 success_*.txt
 fail_*.txt
-test_input_cases_results.csv
-*.stp
-ngmesh.ini
-examples/StimulationSignalAPI/*.pdf
-x86_64/
-*.h5*
-h5_structure_to_txt.py
 meshsizes.txt
-dataset_description.txt
-Rat_head_Andrea_cleaned.brep
-inputTestRat.json
-input_ratvta.json
-input_pathway.json
-data.txt
+
+# Ignore specific file types
+*.vol.gz
+*.vtu
+*.nii.gz
+*.nii
+*.stp
+*.png
+*.eps
+*.pdf
+.DS_Store
+
+# Ignore miscellaneous files
+ng.ini
+ngmesh.ini
+x86_64/
+
+meshsizes.txt
 
 # Auto-generated version file
 ossdbs/_version.py
