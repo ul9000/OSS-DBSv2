@@ -5,6 +5,7 @@
 import argparse
 import json
 import logging
+import multiprocessing
 import os
 import pprint
 import time
@@ -256,4 +257,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     main()
