@@ -412,8 +412,8 @@ class VolumeConductor(ABC):
                 lfp_at_contact = {}
                 lfp_at_contact["time"] = timesteps
                 lfp_at_contact[recording_contact] = (lfp_time_domain)
-                lfp_at_contact[recording_contact] = lfp_at_contact[recording_contact]/1000  # convert from nV to uV
-                self.plot_solution_in_time_domain(lfp_at_contact, "LFP", "$\mu$V")
+                lfp_at_contact[recording_contact] = lfp_at_contact[recording_contact] * 1e-9  # convert from nV to V
+                self.plot_solution_in_time_domain(lfp_at_contact, "LFP", "V")
                 for key in lfp_at_contact:
                     if key == "time":
                         continue
@@ -1173,8 +1173,8 @@ class VolumeConductor(ABC):
 
     def cpe_scaling_factor(self, frequencies) -> float:
         """Calculate scaling factor for CPE model."""
-        K = 2.14 * 1e6  # CPE constant Ohm*mm²*s^-beta (OSSDBS uses mm), from Karthik2025 for PtIr unstimulated eletrode
-        beta = 0.67 # from Karthik2025 for PtIr unstimulated eletrode
+        K = 1.42 * 1e6  # CPE constant Ohm*mm²*s^-beta (OSSDBS uses mm), from Karthik2025 for PtIr unstimulated eletrode
+        beta = 0.85 # from Karthik2025 for PtIr unstimulated eletrode
         Z_amp = 1e6  # Amplitude of electrode impedance at low frequencies
         omega = 2 * np.pi * frequencies
         Z_cpe = np.zeros_like(omega, dtype=complex)
@@ -1185,9 +1185,62 @@ class VolumeConductor(ABC):
         print(f"Z_scale at {frequencies[0]} Hz: {Z_scale}")
         return Z_scale
 
-    def _pm_compute_lfp_at_contact(self, frequencies, frequency_domain_lfp_signals, point_models, nrn_signal=None):
-        """Compute local field potential caused by the point models at the recording electrode contact ."""
 
+    # def _pm_compute_lfp_at_contact(self, frequencies, frequency_domain_lfp_signals, point_models, nrn_signal=None):
+    #     """Compute local field potential caused by the point models at the recording electrode contact ."""
+
+    #     # get the name of the recording electrode contact
+    #     _logger.info("Computing LFP at recording contact.")
+    #     recording_contacts = [contact.name for contact in self.contacts.active if getattr(contact, "voltage", None) == 1]
+    #     if len(recording_contacts) == 0:
+    #         _logger.warning("No active contact with voltage == 1 found for recording.")
+    #     elif len(recording_contacts) > 1:
+    #         _logger.warning("More than one active contact with voltage == 1 found for recording: "
+    #                         f"{', '.join(recording_contacts)}")
+    #     else:
+    #         recording_contact = recording_contacts[0]
+    #     if len(frequency_domain_lfp_signals) == 0:
+    #         _logger.warning("No frequency domain LFP signals found for computing LFP at contact.")
+    #         return np.array([]), recording_contact
+    #     #calculate the LFP at the recording contact
+    #     lfp_share_freq_domain = {}
+    #     lfp_share_freq_domain["frequency"] = frequencies
+    #     lfp_at_electrode_contact = np.zeros_like(frequency_domain_lfp_signals[0])
+    #     # For each compartment, compute its contribution
+    #     # and sum the contributions from all neurons for each floating contact
+    #     # for idx, point_model in enumerate(point_models):
+    #     #     for i in range (len(frequency_domain_lfp_signals)):
+    #     #         lfp_share_freq_domain[f"comp_{i}"] = (
+    #     #             point_model.tmp_potential_freq_domain[i,:] *
+    #     #             frequency_domain_lfp_signals[i] # * cpe_scaling_factor(frequencies)
+    #     #         )
+    #     #         lfp_at_electrode_contact += lfp_share_freq_domain[f"comp_{i}"]
+    #     for idx, point_model in enumerate(point_models):
+    #         lfp_share_freq_domain[f"point_model_{idx}"] = (
+    #             point_model.tmp_potential_freq_domain[:,:frequency_domain_lfp_signals[0].size] *
+    #             frequency_domain_lfp_signals
+    #         ).sum(axis=0)
+    #         lfp_at_electrode_contact += lfp_share_freq_domain[f"point_model_{idx}"]
+    #         lfp_at_electrode_contact = lfp_at_electrode_contact * self.cpe_scaling_factor(frequencies)
+
+    #     # Use inverse FFT to retrieve time-domain signal using full spectrum nrn_signal
+    #     lfp_time_domain = retrieve_lfp_time_domain_signal_from_fft(lfp_at_electrode_contact)
+
+    #     # applybandpass filter between 2 Hz and 500 Hz and 50 Hz notch filter like Sridhar2025
+    #     # lfp_time_domain = process_lfp(
+    #     #     lfp_time_domain,
+    #     #     fs=1/nrn_signal.timestep
+    #     # )
+    #     return lfp_time_domain, recording_contact
+
+    def _pm_compute_lfp_at_contact(
+        self,
+        frequencies,
+        frequency_domain_lfp_signals,
+        point_models,
+        nrn_signal=None,
+    ):
+        """Compute local field potential caused by the point models at the recording electrode contact."""
         # get the name of the recording electrode contact
         _logger.info("Computing LFP at recording contact.")
         recording_contacts = [contact.name for contact in self.contacts.active if getattr(contact, "voltage", None) == 1]
@@ -1201,35 +1254,27 @@ class VolumeConductor(ABC):
         if len(frequency_domain_lfp_signals) == 0:
             _logger.warning("No frequency domain LFP signals found for computing LFP at contact.")
             return np.array([]), recording_contact
+        
         #calculate the LFP at the recording contact
-        lfp_share_freq_domain = {}
-        lfp_share_freq_domain["frequency"] = frequencies
-        lfp_at_electrode_contact = np.zeros_like(frequency_domain_lfp_signals[0])
-        # For each compartment, compute its contribution
-        # and sum the contributions from all neurons for each floating contact
-        # for idx, point_model in enumerate(point_models):
-        #     for i in range (len(frequency_domain_lfp_signals)):
-        #         lfp_share_freq_domain[f"comp_{i}"] = (
-        #             point_model.tmp_potential_freq_domain[i,:] *
-        #             frequency_domain_lfp_signals[i] # * cpe_scaling_factor(frequencies)
-        #         )
-        #         lfp_at_electrode_contact += lfp_share_freq_domain[f"comp_{i}"]
-        for idx, point_model in enumerate(point_models):
-            lfp_share_freq_domain[f"point_model_{idx}"] = (
-                point_model.tmp_potential_freq_domain[:,:frequency_domain_lfp_signals[0].size] *
-                frequency_domain_lfp_signals
-            ).sum(axis=0)
-            lfp_at_electrode_contact += lfp_share_freq_domain[f"point_model_{idx}"]
-            lfp_at_electrode_contact = lfp_at_electrode_contact * self.cpe_scaling_factor(frequencies)
+        frequency_domain_lfp_signals = np.asarray(frequency_domain_lfp_signals)
+        n_freq = frequency_domain_lfp_signals.shape[-1]
+        scaling = self.cpe_scaling_factor(frequencies)
 
-        # Use inverse FFT to retrieve time-domain signal using full spectrum nrn_signal
+        lfp_at_electrode_contact = np.zeros(
+            n_freq,
+            dtype=frequency_domain_lfp_signals.dtype,
+        )
+        for point_model in point_models:
+            potentials = point_model.tmp_potential_freq_domain[:, :n_freq]
+            lfp_at_electrode_contact += np.einsum(
+                "ij,ij->j",
+                potentials,
+                frequency_domain_lfp_signals,
+                optimize=True,
+            )
+        lfp_at_electrode_contact *= scaling
         lfp_time_domain = retrieve_lfp_time_domain_signal_from_fft(lfp_at_electrode_contact)
 
-        # applybandpass filter between 2 Hz and 500 Hz and 50 Hz notch filter like Sridhar2025
-        # lfp_time_domain = process_lfp(
-        #     lfp_time_domain,
-        #     fs=1/nrn_signal.timestep
-        # )
         return lfp_time_domain, recording_contact
 
     def write_csv(self, file_name, value_to_add):
@@ -1250,7 +1295,7 @@ class VolumeConductor(ABC):
             plt.xlabel("Time [s]")
             plt.ylabel(f"{param_id} [{unit}]")
             plt.title(f"{param_id} over Time at {key}")
-            plt.show()
+            #plt.show()
             plt.tight_layout()
             plt.savefig(os.path.join(self.output_path, f"{param_id}_at_{key}.pdf"))
             plt.close()
