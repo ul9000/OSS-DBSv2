@@ -43,6 +43,7 @@ meshsizes.txt
 *.png
 *.eps
 *.pdf
+*.svg
 .DS_Store
 
 # Ignore miscellaneous files
@@ -54,6 +55,18 @@ meshsizes.txt
 
 # Auto-generated version file
 ossdbs/_version.py
+
+# CLAUDE files
+tmpclaude*
+
+# Runtime artifacts
+nohup*.out
+*.log
+
+# Generated figures
+figures/
+
+# Results
+examples/Electrochemistry/*.csv
 # Other generated files
 *.spec
-tmpclaude*

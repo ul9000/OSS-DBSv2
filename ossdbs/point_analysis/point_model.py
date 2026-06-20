@@ -166,9 +166,6 @@ class PointModel(ABC):
         file: h5py.File
             HDF5 file that shall contain data.
 
-        Notes
-        -----
-        TODO documentation
         """
         file.create_dataset("TimeSteps[s]", data=data.time_steps)
         file.create_dataset("Points[mm]", data=data.points)
@@ -219,7 +216,14 @@ class PointModel(ABC):
         """Points inside encapsulation layer."""
         return self._inside_encap
 
-    def prepare_VCM_specific_evaluation(self, mesh: Mesh, conductivity_cf, exclude_csf_encap=False):
+    def prepare_VCM_specific_evaluation(
+        self,
+        mesh: Mesh,
+        conductivity_cf,
+        exclude_csf_encap=False,
+        radius=None,
+        center=None,
+    ):
         """Prepare data structure according to mesh.
 
         Parameters
@@ -245,6 +249,12 @@ class PointModel(ABC):
         )
         self._inside_csf = self.get_points_in_csf(mesh, conductivity_cf)
         self._inside_encap = self.get_points_in_encapsulation_layer(mesh)
+        self._outside_radius = (
+            self.get_points_outside_radius(radius, center)
+            if radius is not None
+            else np.zeros_like(self._inside_csf, dtype=bool)
+        )
+        self._inside_unknown = self.get_points_in_unknown(mesh, conductivity_cf)
 
     def prepare_frequency_domain_data_structure(
         self, signal_length: int, out_of_core: bool = False
@@ -377,10 +387,14 @@ class PointModel(ABC):
         material_distribution = conductivity_cf.material_distribution(mesh)
         ngmesh = mesh.ngsolvemesh
         x, y, z = self.lattice.T
-        return np.isclose(
-            material_distribution(ngmesh(x, y, z)), conductivity_cf.materials["CSF"]
-        )
-    
+        # always false (no CSF detected)
+        csf_index = -1
+        # only do real check when CSF is defined
+        if "CSF" in conductivity_cf.materials:
+            csf_index = conductivity_cf.materials["CSF"]
+
+        return np.isclose(material_distribution(ngmesh(x, y, z)), csf_index)
+
     def get_points_in_unknown(self, mesh: Mesh, conductivity_cf) -> np.ndarray:
         """Return mask for points in unknown material.
 
@@ -601,14 +615,18 @@ class PointModel(ABC):
 
         self.save_as_nifti(
             field_mags_full,
-            os.path.join(self.output_path, f"E_field_solution_{self.name}.nii"),
+            os.path.join(self.output_path, f"E_field_solution_{self.name}.nii.gz"),
         )
-        self.save_as_nifti(
-            field_mags_full,
-            os.path.join(self.output_path, f"VTA_solution_{self.name}.nii"),
-            binarize=True,
-            activation_threshold=activation_threshold,
-        )
+        # The binarized VTA only makes sense with a threshold. In StimSets
+        # mode the per-contact unit solution has no meaningful VTA (it is
+        # formed after superposition), so the threshold may be unset.
+        if activation_threshold is not None:
+            self.save_as_nifti(
+                field_mags_full,
+                os.path.join(self.output_path, f"VTA_solution_{self.name}.nii.gz"),
+                binarize=True,
+                activation_threshold=activation_threshold,
+            )
 
     def create_time_result(
         self,
@@ -743,26 +761,38 @@ class PointModel(ABC):
         )
 
     def write_netgen_meshsize_file(self, meshsize: float, filename: str) -> None:
-        """Use coordinates of point model to impose local mesh size.
+        """Write a Netgen mesh-size file from the point model coordinates.
+
+        This generates a file that can be passed to Netgen via the
+        ``MeshSizeFilename`` parameter in ``MeshingHypothesis`` to refine
+        the mesh around pathway or lattice points.  This is particularly
+        useful in convergence studies where the mesh needs to be fine
+        near neuron trajectories.
+
+        Parameters
+        ----------
+        meshsize : float
+            Target element size (in mm) at each point.  A common choice
+            is the minimum MRI voxel size.
+        filename : str
+            Output file path (e.g. ``"meshsizes.txt"``).
 
         Notes
         -----
-        Local mesh size for points is set.
-        The file has the following format according to the Netgen
-        documentation:
+        The file follows the Netgen mesh-size format:
 
         .. code-block:: text
 
             nr_points
-            x1, y1, z1, meshsize
-            x2, y2, z2, meshsize
-            ...
-            xn, yn, zn, meshsize
 
-            nr_edges
-            x11, y11, z11, x12, y12, z12, meshsize
+            x1 y1 z1 meshsize
+            x2 y2 z2 meshsize
             ...
-            xn1, yn1, zn1, xn2, yn2, zn2, meshsize
+
+            0
+
+        The trailing ``0`` indicates that no edge-based size constraints
+        are written.
         """
         points = self.coordinates
         with open(filename, "w") as fp:

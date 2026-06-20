@@ -26,6 +26,7 @@ from ossdbs.api import (
     run_stim_sets,
     run_volume_conductor_model,
     set_contact_and_encapsulation_layer_properties,
+    validate_solver_settings,
 )
 from ossdbs.fem import ConductivityCF
 from ossdbs.model_geometry import ModelGeometry
@@ -106,6 +107,9 @@ def main_run(input_settings: dict):
     timings["ContactProperties"] = time_1 - time_0
     time_0 = time_1
 
+    # Validate solver settings for FloatingImpedance + EQS mode
+    validate_solver_settings(settings, geometry)
+
     dielectric_properties = prepare_dielectric_properties(settings)
 
     time_1 = time.time()
@@ -140,16 +144,22 @@ def main_run(input_settings: dict):
                     "as a floating-point number. "
                     "Set e.g. to 20 for 20 times pulse + counterpulse width."
                 )
+            if truncation_ratio < 1.0:
+                raise ValueError(
+                    "The truncation ratio is a multiple of the "
+                    "active signal part."
+                    "Values smaller than 1.0 are not permitted."
+                )
             time_domain_signal = generate_signal(settings)
             truncation_time = truncation_ratio * time_domain_signal.get_active_time()
 
     # save Mesh for StimSets
     if settings["StimSets"]["Active"]:
-        settings["Mesh"]["SaveMesh"] = True
         settings["Mesh"]["SavePath"] = os.path.join(settings["OutputPath"], "tmp_mesh")
         settings["Mesh"]["LoadPath"] = os.path.join(
             settings["OutputPath"], "tmp_mesh.vol.gz"
         )
+        settings["Mesh"]["SaveMesh"] = False
         settings["Mesh"]["LoadMesh"] = False
         # because of floating
         settings["Solver"]["Preconditioner"] = "local"
@@ -165,6 +175,9 @@ def main_run(input_settings: dict):
             nrn_signal = prepare_neuron_currents(settings)       
         frequency_domain_signal = prepare_stimulation_signal(settings, nrn_signal)
         if not settings["StimSets"]["Active"]:
+            volume_conductor.prepare_mesh_refinements(
+                settings["Mesh"]["MaterialRefinementSteps"]
+            )
             vcm_timings = run_volume_conductor_model(
                 settings,
                 volume_conductor,
@@ -174,8 +187,13 @@ def main_run(input_settings: dict):
             )
             _logger.info(f"Volume conductor timings:\n{pprint.pformat(vcm_timings)}")
         else:
-            # mesh was saved already
-            settings["Mesh"]["SaveMesh"] = False
+            # Apply h-refinement (material bisection) and save the
+            # h-refined mesh.  HP refinement is deferred: it will be
+            # applied on each per-contact VCM after loading the mesh.
+            volume_conductor.apply_h_refinements(
+                settings["Mesh"]["MaterialRefinementSteps"]
+            )
+            volume_conductor.mesh.save(settings["Mesh"]["SavePath"])
             settings["Mesh"]["LoadMesh"] = True
             run_stim_sets(
                 settings, geometry, conductivity, solver, frequency_domain_signal
