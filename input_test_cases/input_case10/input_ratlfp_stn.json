@@ -60,7 +60,7 @@
             "Gray matter": 3,
             "Blood": 4
         },
-        "DiffusionTensorActive": true,
+        "DiffusionTensorActive": false,
         "DTIPath": "../../input_files/DTI_truncated_FSL_order_Norm_mapping.nii.gz"
     },
     "DielectricModel": {
@@ -70,8 +70,8 @@
         "Type": "Im",
         "CurrentControlled": true,
         "SpectrumMode": "OctaveBand",
-        "Timestep[s]": 0.0001,
-        "LFP_radius[mm]": 1.0
+        "Timestep[s]": 0.0004,
+        "LFP_radius[mm]": 0.6
     },
     "Mesh": {
         "LoadMesh": false,
@@ -98,7 +98,7 @@
     "PointModel": {
         "Pathway": {
             "Active": true,
-            "FileName": "../../input_files/I_unfiltered_1.h5"
+            "FileName": "../../input_files/I_filtered_10000_350_sigma20_Cell_with_AIS.h5"
         },
         "Lattice": {
             "Active": false,
@@ -122,7 +122,7 @@
     },
     "EQSMode": false,
     "FEMOrder": 2,
-    "OutputPath": "./1_bipolar_lfp_dti_noencap",
+    "OutputPath": "./Results_10000_350_sigma20_Cell_with_AIS_noEncap_noDTI",
     "ComputeImpedance": true,
     "ExportVTK": true,
     "ExportElectrode": true

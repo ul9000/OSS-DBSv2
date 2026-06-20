@@ -4,7 +4,6 @@
 import logging
 import os
 from abc import ABC, abstractmethod
-
 import h5py
 import ngsolve
 import numpy as np
@@ -420,6 +419,7 @@ class PointModel(ABC):
         TODO Type hint
         """
         x, y, z = self.lattice.T
+        _logger.info(f"Marking points outside radius of {radius} mm from center {center}.")
         return np.sqrt((x - center[0])**2 + (y - center[1])**2 + (z - center[2])**2) > radius
 
     @property

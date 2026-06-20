@@ -5,14 +5,14 @@ from scipy import signal
 from scipy.integrate import trapezoid
 from math import gcd
 
-start = 20
-stop = 21
-step = 1
-fileending = "test_filtered20"
+start = 5
+stop = 20
+step = 5
+fileending = "10000_350_sigma20_Cell_with_AIS_noEncap_noDTI"
 
 dt = 0.0004  # 0.4 ms sampling interval
 fs = 1 / dt  # 2500 Hz
-target_fs = 1000  # Sridhar2026 used 2500 Hz
+target_fs = 2500  # Sridhar2026 used 2500 Hz
 
 
 def calculate_lfp_psd(data, fs, window_duration=1.0, overlap_pct=0.5):
@@ -121,11 +121,12 @@ for i in np.arange(start, stop, step):
 
     # Plot PSD
     plt.figure(1)
-    plt.plot(freqs, psd_values*1e12) # convert from V^2/Hz to uV^2/Hz for better visualization
-    #plt.title("LFP PSD (Welch's Method) " + fileending)
+    plt.plot(freqs, psd_values*1e12, label=f"Radius: {i/10} mm") # convert from V^2/Hz to uV^2/Hz for better visualization
+    plt.title("LFP PSD (Welch's Method)")
     plt.xlabel("Frequency (Hz)")
     plt.ylabel(r"Power/Frequency ($\mu$V^2/Hz)")
-    plt.xlim(0, 500) 
+    plt.xlim(0, 100) 
+    plt.legend()
     plt.grid(True)
     plt.savefig(path + f"PSD_{fileending}.pdf")
 
@@ -134,7 +135,7 @@ plt.plot(radius, bipolar_lfp_rms*1e6, marker="o", label="DTI")
 plt.legend()
 plt.xlabel("Radius (mm)")
 plt.ylabel(r"RMS LFP ($\mu$V)")
-#plt.title("RMS bipolar LFP vs. Radius " + fileending)
+plt.title("RMS bipolar LFP vs. Radius")
 plt.grid()
 plt.savefig(path + f"RMS_LFP_{fileending}.pdf")
 #plt.show()
@@ -144,7 +145,7 @@ plt.plot(time1, data*1e6) # convert from V to uV for better visualization
 #plt.legend()
 plt.xlabel("Time (s)")
 plt.ylabel(r"LFP ($\mu$V)")
-#plt.title(f"Bipolar LFP vs. Time {fileending}")
+plt.title(f"Bipolar LFP")
 plt.grid()
 plt.savefig(path + f"LFP_{fileending}.pdf")
 #plt.show()

@@ -1,10 +1,11 @@
+# run with: nohup python3 param_sweep_lfp.py > param_sweep_lfp.log 2>&1 &
+
 import json
 import subprocess
-import os
 
-start = 10 
-stop = 12
-step = 2
+start = 5
+stop = 16
+step = 1
 
 path = "/home/ulrike/OSS-DBSv2/input_test_cases/input_case10/"
 
@@ -66,5 +67,3 @@ for i in range(start, stop, step):
     subprocess.run(["ossdbs", filename])
     delete_command = f"rm {path}input_ratlfp_stn_{i}.json"
     subprocess.run(delete_command, shell=True)
-
-    os.system('beep')
