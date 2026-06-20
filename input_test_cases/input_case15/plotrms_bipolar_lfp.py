@@ -8,7 +8,7 @@ from math import gcd
 start = 5
 stop = 20
 step = 5
-fileending = "10000_350_sigma20_Cell_with_AIS_noEncap_noDTI"
+fileending = "10000_350_sigma20_Cell_with_AIS_noEncap_noDTI_test"
 
 dt = 0.0004  # 0.4 ms sampling interval
 fs = 1 / dt  # 2500 Hz

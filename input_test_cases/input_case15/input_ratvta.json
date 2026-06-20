@@ -1,0 +1,143 @@
+{
+  "BrainRegion": {
+    "Center": {
+      "x[mm]": 22.95,
+      "y[mm]": 11.47,
+      "z[mm]": 8.1
+    },
+    "Dimension": {
+      "x[mm]": 20.0,
+      "y[mm]": 20.0,
+      "z[mm]": 20.0
+    },
+    "Shape": "Sphere"
+  },
+  "Electrodes": [
+    {
+      "Name": "MicroProbesSNEX100",
+      "PathToCustomParameters": "",
+      "Rotation[Degrees]": 0.0,
+      "Direction": {
+        "x[mm]": 0.0,
+        "y[mm]": 0.0,
+        "z[mm]": 1.0
+      },
+      "TipPosition": {
+        "x[mm]": 22.95,
+        "y[mm]": 11.47,
+        "z[mm]": 8.1
+      },
+      "Contacts": [
+        {
+          "Contact_ID": 1,
+          "Active": true,
+          "Current[A]": 0.0,
+          "Voltage[V]": 1.0,
+          "Floating": false
+        },
+        {
+          "Contact_ID": 2,
+          "Active": true,
+          "Current[A]": 0.0,
+          "Voltage[V]": 0.0,
+          "Floating": false
+        }
+      ],
+      "EncapsulationLayer": {
+        "Thickness[mm]": 0.0,
+        "Material": "Blood",
+        "DielectricModel": "ColeCole4",
+        "MaxMeshSize": 0.1
+      }
+    }
+  ],
+  "MaterialDistribution": {
+    "MRIPath": "rat_data/johnson/new_segmented_Atlas_GMWMCSF.nii.gz",
+    "MRIMapping": {
+      "Unknown": 0,
+      "CSF": 1,
+      "White matter": 2,
+      "Gray matter": 3,
+      "Blood": 4
+    },
+    "DiffusionTensorActive": false,
+    "DTIPath": ""
+  },
+  "DielectricModel": {
+    "Type": "ColeCole4"
+  },
+  "StimulationSignal": {
+    "CurrentControlled": false,
+    "Type": "Multisine",
+    "ListOfFrequencies": [
+      10000.0
+    ]
+  },
+  "Mesh": {
+    "LoadMesh": false,
+    "MeshElementOrder": 2,
+    "MeshingHypothesis": {
+      "Type": "Fine",
+      "MaxMeshSize": 1
+    },
+    "MeshSize": {
+      "Edges": {},
+      "Faces": {},
+      "Volumes": {}
+    },
+    "SaveMesh": false
+  },
+  "Solver": {
+    "Type": "CG",
+    "Preconditioner": "bddc",
+    "PreconditionerKwargs": {},
+    "PrintRates": true,
+    "MaximumSteps": 200,
+    "Precision": 1e-8
+  },
+  "PointModel": {
+    "Pathway": {
+      "Active": false,
+      "FileName": "",
+      "ExportField": false
+    },
+    "Lattice": {
+      "Active": true,
+      "Center": {
+        "x[mm]": 22.95,
+        "y[mm]": 11.47,
+        "z[mm]": 8.1
+      },
+      "Shape": {
+        "x": 40,
+        "y": 40,
+        "z": 160
+      },
+      "Direction": {
+        "x[mm]": 0,
+        "y[mm]": 0,
+        "z[mm]": 1
+      },
+      "PointDistance[mm]": 0.125,
+      "CollapseVTA": false,
+      "ExportField": true
+    },
+    "VoxelLattice": {
+      "Active": false,
+      "Shape": {
+        "x": 20,
+        "y": 20,
+        "z": 20
+      },
+      "ExportField": true
+    }
+  },
+  "ActivationThresholdVTA[V-per-m]": 200.0,
+  "EQSMode": false,
+  "FEMOrder": 2,
+  "OutputPath": "Results_ratVTA",
+  "ComputeImpedance": false,
+  "ExportVTK": false,
+  "ExportElectrode": false,
+  "OutOfCore": false
+}

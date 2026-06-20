@@ -122,7 +122,7 @@
     },
     "EQSMode": false,
     "FEMOrder": 2,
-    "OutputPath": "./Results_10000_350_sigma20_Cell_with_AIS_noEncap_noDTI",
+    "OutputPath": "./Results_10000_350_sigma20_Cell_with_AIS_noEncap_noDTI_test",
     "ComputeImpedance": true,
     "ExportVTK": true,
     "ExportElectrode": true
