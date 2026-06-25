@@ -1,14 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import butter, iirnotch, sosfiltfilt
+from scipy.signal import butter, sosfiltfilt
 from scipy import signal
 from scipy.integrate import trapezoid
 from math import gcd
 
 start = 5
-stop = 20
-step = 5
-fileending = "10000_350_sigma20_Cell_with_AIS_noEncap_noDTI_test"
+stop = 18
+step = 1
+fileending = "10000_350_sigma20_Cell_with_AIS_noEncap_DTI_noRotation"
 
 dt = 0.0004  # 0.4 ms sampling interval
 fs = 1 / dt  # 2500 Hz
@@ -46,13 +46,6 @@ def process_lfp(data, fs):
     sos_lowpass = butter(4, high_cutoff, btype='lowpass', fs=fs, output='sos')
     final_signal = sosfiltfilt(sos_lowpass, data)
     
-    # 2. Notch Filter for Power Line Noise (50 Hz)
-    max_notch = int(min(500, nyquist * 0.95))
-    # for i in range(50, max_notch + 1, 50): # apply notch filters at 50 Hz and its harmonics
-    #     b_notch, a_notch = iirnotch(i, 30, fs)
-    #     sos_notch = tf2sos(b_notch, a_notch)
-    #     final_signal = sosfiltfilt(sos_notch, final_signal)
-    
     return final_signal
 
 def downsample_trace(time, values, source_fs, target_fs):
@@ -75,7 +68,7 @@ def downsample_trace(time, values, source_fs, target_fs):
 # main code
 #####################################################################################################
 
-path = f"/home/ulrike/OSS-DBSv2/input_test_cases/input_case10/Results_{fileending}/"
+path = f"/home/ulrike/OSS-DBSv2/input_test_cases/input_case15/Results_{fileending}/"
 
 bipolar_lfp_rms = np.zeros(int((stop - start) / step))
 bipolar_lfp_rms_DTI = np.zeros(int((stop - start) / step))
@@ -101,19 +94,6 @@ for i in np.arange(start, stop, step):
     # Calculate PSD
     # print(f"fs = {fs}, data length = {len(data)}, duration = {len(data)/fs} seconds")
     freqs, psd_values = calculate_lfp_psd(data, current_fs)
-
-    # # 1. Create the CSV file if it does not exist
-    # file_name = "psd.csv"
-    # file_exists = os.path.isfile(file_name)
-
-    # # 1. Create the CSV file
-    # with open(file_name, mode="w", newline="") as file:
-    #     writer = csv.writer(file)
-    #     # Write header
-    #     writer.writerow(["frequency", "psd"])
-    #     # Write rows (frequency, psd pairs)
-    #     for f, p in zip(freqs, psd_values):
-    #         writer.writerow([f, p])
 
     # total_power = trapezoid(psd_values, freqs)
     # print(total_power)
