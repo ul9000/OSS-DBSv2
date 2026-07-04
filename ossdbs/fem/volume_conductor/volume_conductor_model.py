@@ -1376,8 +1376,8 @@ class VolumeConductor(ABC):
 
     def cpe_scaling_factor(self, frequencies) -> float:
         """Calculate scaling factor for CPE model."""
-        K = 1.42 * 1e6  # CPE constant Ohm*mm²*s^-beta (OSSDBS uses mm), from Karthik2025 for PtIr unstimulated eletrode
-        beta = 0.85 # from Karthik2025 for PtIr unstimulated eletrode
+        K = 1.42 * 1e6  # CPE constant Ohm*mm²*s^-beta (OSSDBS uses mm), from Karthik2025 for PtIr stimulated eletrode
+        beta = 0.85 # from Karthik2025 for PtIr stimulated eletrode
         Z_amp = 1e6  # Amplitude of electrode impedance at low frequencies
         omega = 2 * np.pi * frequencies
         Z_cpe = np.zeros_like(omega, dtype=complex)
