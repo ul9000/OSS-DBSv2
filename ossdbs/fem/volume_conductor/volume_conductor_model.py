@@ -549,7 +549,7 @@ class VolumeConductor(ABC):
                         raise ValueError(f"Unexpected contact name {key} in lfp_at_contact")
                 df = pd.DataFrame(lfp_at_contact)
                 df.to_csv(
-                    os.path.join(self.output_path, f"{contact}_lfp_at_contact_in_time_{nrn_signal.LFP_radius}.csv"), index=False
+                    os.path.join(self.output_path, f"{contact}_lfp_at_contact_in_time_{nrn_signal.LFP_radius:.1f}.csv"), index=False
                 )
 
         # export time domain solution if a proper signal has been passed

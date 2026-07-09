@@ -8,8 +8,8 @@ from math import gcd
 from pathlib import Path
 
 start_encap = 0
-stop_encap = 150
-step_encap = 100
+stop_encap = 200
+step_encap = 50
 start_radius = 5
 stop_radius = 18
 step_radius = 1
@@ -100,38 +100,44 @@ for i in np.arange(start_encap, stop_encap, step_encap):
         fileending = f"10000_350_sigma20_Cell_with_AIS_Encap{i}_{tissue_type}"
         path = f"/home/ulrike/OSS-DBSv2/input_test_cases/input_case15/Results_{fileending}/"
         models.append(fileending)
-        data0 = np.loadtxt(path + f"c1_lfp_at_contact_in_time_{j/10}.csv", skiprows=1, delimiter=",")
-        time1 = np.float32(np.array(data0))[:, 0] # in seconds
-        data1 = np.float32(np.array(data0))[:, 1] # in V
-        #data1 = process_lfp(data1, fs) # apply filters to the first contact's LFP
-        time1, data1, current_fs = downsample_trace(time1, data1, fs, target_fs)
+        if not Path(path).exists():
+            exit(f"Path {path} does not exist. Please check the fileending or run the simulations first.")
+        elif not Path(path + f"c1_lfp_at_contact_in_time_{j/10}.csv").exists():
+            rms = np.nan
+            bipolar_lfp_rms[int((j - start_radius) / step_radius)] = np.nan
+        else:
+            data0 = np.loadtxt(path + f"c1_lfp_at_contact_in_time_{j/10}.csv", skiprows=1, delimiter=",")
+            time1 = np.float32(np.array(data0))[:, 0] # in seconds
+            data1 = np.float32(np.array(data0))[:, 1] # in V
+            #data1 = process_lfp(data1, fs) # apply filters to the first contact's LFP
+            time1, data1, current_fs = downsample_trace(time1, data1, fs, target_fs)
 
-        data2_raw = np.loadtxt(path + f"c2_lfp_at_contact_in_time_{j/10}.csv", skiprows=1, delimiter=",")
-        time2 = np.float32(np.array(data2_raw))[:, 0] # in seconds
-        data2 = np.float32(np.array(data2_raw))[:, 1] # in V
-        time2, data2, _ = downsample_trace(time2, data2, fs, target_fs)
-        #data2 = process_lfp(data2, fs) # apply filters to the second contact's LFP
-        data = (data1 - data2) # subtract to get bipolar LFP
-        #data = process_lfp(data, current_fs) # apply filters to the bipolar LFP
-        rms = np.sqrt(np.mean(data**2))
-        bipolar_lfp_rms[int((j - start_radius) / step_radius)] = rms
+            data2_raw = np.loadtxt(path + f"c2_lfp_at_contact_in_time_{j/10}.csv", skiprows=1, delimiter=",")
+            time2 = np.float32(np.array(data2_raw))[:, 0] # in seconds
+            data2 = np.float32(np.array(data2_raw))[:, 1] # in V
+            time2, data2, _ = downsample_trace(time2, data2, fs, target_fs)
+            #data2 = process_lfp(data2, fs) # apply filters to the second contact's LFP
+            data = (data1 - data2) # subtract to get bipolar LFP
+            #data = process_lfp(data, current_fs) # apply filters to the bipolar LFP
+            rms = np.sqrt(np.mean(data**2))
+            bipolar_lfp_rms[int((j - start_radius) / step_radius)] = rms
 
-        # Calculate PSD
-        freqs, psd_values = calculate_lfp_psd(data, current_fs)
-        if j == 15:
-            plt.figure(1)
-            plt.plot(
-                freqs, 
-                psd_values*1e12,  # convert from V^2/Hz to uV^2/Hz for better visualization
-                label="Encap: " + str(i) + " $\mu$m",
-            )
-            plt.title(f"LFP PSD (Welch's Method) {tissue_type}, neuron radius = {j/10} mm")
-            plt.xlabel("Frequency (Hz)")
-            plt.ylabel(r"Power/Frequency ($\mu$V^2/Hz)")
-            plt.xlim(0, 100) 
-            plt.grid(True)
-            plt.legend()
-            plt.savefig(results_path_string + f"PSD_Cell_with_AIS.pdf")
+            # Calculate PSD
+            freqs, psd_values = calculate_lfp_psd(data, current_fs)
+            if j == 15:
+                plt.figure(1)
+                plt.plot(
+                    freqs, 
+                    psd_values*1e12,  # convert from V^2/Hz to uV^2/Hz for better visualization
+                    label="Encap: " + str(i) + " $\mu$m",
+                )
+                plt.title(f"LFP PSD (Welch's Method) {tissue_type}, neuron radius = {j/10} mm")
+                plt.xlabel("Frequency (Hz)")
+                plt.ylabel(r"Power/Frequency ($\mu$V^2/Hz)")
+                plt.xlim(0, 100) 
+                plt.grid(True)
+                plt.legend()
+                plt.savefig(results_path_string + f"PSD_Cell_with_AIS.pdf")
 
     plt.figure(2)
     plt.plot(radius, bipolar_lfp_rms*1e6, marker="o", label="Encap: " + str(i) + " $\mu$m") # convert from V to uV for better visualization
