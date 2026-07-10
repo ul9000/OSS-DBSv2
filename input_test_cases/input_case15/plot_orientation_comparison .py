@@ -7,19 +7,28 @@ from scipy import signal
 from math import gcd
 from pathlib import Path
 
-start_encap = 0
-stop_encap = 200
-step_encap = 50
+# start_encap = 0
+# stop_encap = 200
+# step_encap = 50
 start_radius = 5
 stop_radius = 18
 step_radius = 1
 PSDplot_radius = 10
-tissue_type = "noDTI"
+tissue_type = "DTI"
+
+keys = ["", "_alongSTN", "_alongX", "_alongY", "_alongZ"]
+key_labels = {
+    "": "Random orientation",
+    "_alongSTN": "Along STN",
+    "_alongX": "Along X",
+    "_alongY": "Along Y",
+    "_alongZ": "Along Z",
+}
 
 dt = 0.0004 #  sampling interval [ms]
 fs = 1 / dt      # 2500 Hz
 target_fs = 2500  # Sridhar2026 used 2500 Hz
-results_path_string = "/home/ulrike/OSS-DBSv2/input_test_cases/input_case15/Results_EncapComparison/"
+results_path_string = "/home/ulrike/OSS-DBSv2/input_test_cases/input_case15/Results_OrientationComparison/"
 results_path = Path(results_path_string)
 results_path.mkdir(parents=True, exist_ok=True)
 results_path.mkdir(parents=True, exist_ok=True)
@@ -84,25 +93,13 @@ def downsample_trace(time, values, source_fs, target_fs):
 models = []
 
 Cell_with_AIS = [] # Cell_with_AIS
-encap_values = []
 bipolar_lfp_rms = np.zeros(int((stop_radius - start_radius) / step_radius))
 radius = np.arange(start_radius, stop_radius, step_radius) / 10 # convert to mm
-# color_map = {
-#     "myGillies": "tab:blue",
-#     "Cell_with_AIS": "tab:orange"
-# }
-# marker_map = {
-#     0: "s",   # square
-#     50: "^",  # triangle
-#     100: "o",  # circle/dot
-#     150: "D"   # diamond
-# }
 
-for i in np.arange(start_encap, stop_encap, step_encap):
-    encap_values.append(f"{i}") # in um
+for key in keys:
     for j in range(start_radius, stop_radius, step_radius):
 
-        fileending = f"10000_350_sigma20_Cell_with_AIS_Encap{i}_{tissue_type}"
+        fileending = f"10000_350_sigma20_Cell_with_AIS_Encap0_{tissue_type}{key}"
         path = f"/home/ulrike/OSS-DBSv2/input_test_cases/input_case15/Results_{fileending}/"
         models.append(fileending)
         if not Path(path).exists():
@@ -129,23 +126,24 @@ for i in np.arange(start_encap, stop_encap, step_encap):
 
             # Calculate PSD
             freqs, psd_values = calculate_lfp_psd(data, current_fs)
+
             if j == PSDplot_radius:
                 plt.figure(1)
                 plt.plot(
                     freqs, 
                     psd_values*1e12,  # convert from V^2/Hz to uV^2/Hz for better visualization
-                    label="Encap: " + str(i) + " $\mu$m",
+                    label=key_labels[key]
                 )
                 plt.title(f"LFP PSD (Welch's Method) {tissue_type}, neuron radius = {j/10} mm")
                 plt.xlabel("Frequency (Hz)")
                 plt.ylabel(r"Power/Frequency ($\mu$V^2/Hz)")
-                plt.xlim(0, 100) 
+                plt.xlim(0, 50) 
                 plt.grid(True)
                 plt.legend()
                 plt.savefig(results_path_string + f"PSD_Cell_with_AIS.pdf")
 
     plt.figure(2)
-    plt.plot(radius, bipolar_lfp_rms*1e6, marker="o", label="Encap: " + str(i) + " $\mu$m") # convert from V to uV for better visualization
+    plt.plot(radius, bipolar_lfp_rms*1e6, marker="o", label=key_labels[key]) # convert from V to uV for better visualization
     plt.legend()
     plt.xlabel("Radius (mm)")
     plt.ylabel(r"RMS LFP ($\mu$V)")

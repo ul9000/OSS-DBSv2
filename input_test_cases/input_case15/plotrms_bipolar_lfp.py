@@ -5,10 +5,10 @@ from scipy import signal
 from scipy.integrate import trapezoid
 from math import gcd
 
-start = 5
-stop = 18
+start = 10
+stop = 11
 step = 1
-fileending = "10000_350_sigma20_Cell_with_AIS_noEncap_DTI_noRotation"
+fileending = "100_80_sigma20_Cell_with_AIS_test_Encap0_DTI"
 
 dt = 0.0004  # 0.4 ms sampling interval
 fs = 1 / dt  # 2500 Hz
@@ -38,6 +38,7 @@ def calculate_lfp_psd(data, fs, window_duration=1.0, overlap_pct=0.5):
 def process_lfp(data, fs):
     nyquist = fs / 2.0
     high_cutoff = min(500, nyquist * 0.95)
+    low_cutoff = 1.0  # Hz
 
     if high_cutoff <= 0:
         return data
@@ -45,7 +46,11 @@ def process_lfp(data, fs):
     # 1. 4th Order Butterworth low-pass filter
     sos_lowpass = butter(4, high_cutoff, btype='lowpass', fs=fs, output='sos')
     final_signal = sosfiltfilt(sos_lowpass, data)
-    
+
+    # 2. 4th Order Butterworth high-pass filter
+    sos_highpass = butter(4, low_cutoff, btype='highpass', fs=fs, output='sos')
+    final_signal = sosfiltfilt(sos_highpass, final_signal)
+
     return final_signal
 
 def downsample_trace(time, values, source_fs, target_fs):
