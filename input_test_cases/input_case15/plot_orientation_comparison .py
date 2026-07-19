@@ -1,5 +1,3 @@
-from tracemalloc import start
-
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
@@ -30,7 +28,6 @@ fs = 1 / dt      # 2500 Hz
 target_fs = 2500  # Sridhar2026 used 2500 Hz
 results_path_string = "/home/ulrike/OSS-DBSv2/input_test_cases/input_case15/Results_OrientationComparison/"
 results_path = Path(results_path_string)
-results_path.mkdir(parents=True, exist_ok=True)
 results_path.mkdir(parents=True, exist_ok=True)
 
 def calculate_lfp_psd(data, fs, window_duration=1.0, overlap_pct=0.5):

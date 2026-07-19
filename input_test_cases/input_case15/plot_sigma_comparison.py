@@ -13,7 +13,6 @@ target_fs = 2500  # Sridhar2026 used 2500 Hz
 results_path_string = "/home/ulrike/OSS-DBSv2/input_test_cases/input_case10/Results_SigmaComparison/"
 results_path = Path(results_path_string)
 results_path.mkdir(parents=True, exist_ok=True)
-results_path.mkdir(parents=True, exist_ok=True)
 
 def calculate_lfp_psd(data, fs, window_duration=1.0, overlap_pct=0.5):
     """
