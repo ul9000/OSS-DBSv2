@@ -82,6 +82,9 @@ def build_output_path(pointmodel_file, encap_um, dti_active):
     return f"./Results_{tag}_Encap{encap_um}_{dti_tag}"
 
 
+SURFACE_IMPEDANCE = {"Model": "CPE_dl", "Parameters": {"dl_k": 1.5e6, "dl_alpha": 0.8}}
+
+
 def _activate_contact(data, active_id):
     for electrode in data["Electrodes"]:
         for contact in electrode["Contacts"]:
@@ -90,6 +93,10 @@ def _activate_contact(data, active_id):
             contact["Current[A]"] = 1.0 if is_active else 0.0
             contact["Voltage[V]"] = 1.0 if is_active else 0.0
             contact["Floating"] = False
+            if is_active:
+                contact["SurfaceImpedance"] = SURFACE_IMPEDANCE
+            else:
+                contact.pop("SurfaceImpedance", None)
 
 
 def run_sweep(active_contact_id, pointmodel_file, encap_um, dti_active, output_path, start, stop, step):

@@ -71,6 +71,13 @@ class Contact:
         self, frequency: float, is_complex: bool
     ) -> float | complex:
         """Return surface impedance at fixed frequency."""
+        if frequency == 0:
+            # Dispersive models like CPE (Z = k * (j*omega)**-alpha) are
+            # undefined at DC and would otherwise evaluate 0**(-alpha), giving
+            # NaN. Physically such contacts fully block DC current, i.e. the
+            # surface impedance diverges, so return infinity directly.
+            return complex(np.inf) if is_complex else np.inf
+
         try:
             import impedancefitter as ifit
         except ImportError as err:

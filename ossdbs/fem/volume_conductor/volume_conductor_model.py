@@ -1110,6 +1110,12 @@ class VolumeConductor(ABC):
             _logger.debug("Scale solution for current_controlled mode")
             if self.current_controlled and len(self.contacts.active) == 2:
                 impedance = self.impedances[freq_idx]
+                if not np.isfinite(impedance):
+                    # An infinite contact impedance (e.g. a CPE surface
+                    # impedance model at DC) means no current can actually
+                    # flow at this frequency. Contribute nothing rather than
+                    # propagating inf * amplitude into a NaN downstream.
+                    return 0.0
                 # use Ohm's law U = Z * I
                 # and that the Fourier coefficient for the current is known
                 amplitude = self.contacts.active[0].current
@@ -1461,7 +1467,7 @@ class VolumeConductor(ABC):
         #calculate the LFP at the recording contact
         frequency_domain_lfp_signals = np.asarray(frequency_domain_lfp_signals)
         n_freq = frequency_domain_lfp_signals.shape[-1]
-        scaling = self.cpe_scaling_factor(frequencies)
+        # scaling = self.cpe_scaling_factor(frequencies)
 
         lfp_at_electrode_contact = np.zeros(
             n_freq,
@@ -1475,7 +1481,7 @@ class VolumeConductor(ABC):
                 frequency_domain_lfp_signals,
                 optimize=True,
             )
-        lfp_at_electrode_contact *= scaling
+        # lfp_at_electrode_contact *= scaling
         lfp_time_domain = retrieve_lfp_time_domain_signal_from_fft(lfp_at_electrode_contact)
 
         return lfp_time_domain, recording_contact

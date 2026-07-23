@@ -33,14 +33,18 @@
                     "Active": true,
                     "Current[A]": 1.0,
                     "Voltage[V]": 1.0,
-                    "Floating": false
+                    "Floating": false,
+            "SurfaceImpedance":
+	        {"Model": "CPE_dl", "Parameters": {"dl_k": 1.5e6, "dl_alpha": 0.8}}
                 },
                 {
                     "Contact_ID": 2,
                     "Active": false,
                     "Current[A]": 0.0,
                     "Voltage[V]": 0.0,
-                    "Floating": false
+                    "Floating": false,
+            "SurfaceImpedance":
+            {"Model": null, "Parameters": {}}
                 }
             ],
             "EncapsulationLayer": {
@@ -78,7 +82,7 @@
         "MeshElementOrder": 2,
         "MeshingHypothesis": {
             "Type": "Fine",
-            "MaxMeshSize": 1
+            "MaxMeshSize": 1.0
         },
         "MeshSize": {
             "Edges": {},
@@ -98,7 +102,7 @@
     "PointModel": {
         "Pathway": {
             "Active": true,
-            "FileName": "../../input_files/I_filtered_10000_350_sigma20_Cell_with_AIS.h5"
+            "FileName": "../../input_files/I_filtered_1000_350_sigma6_myGilliesSTNwithAIS.h5"
         },
         "Lattice": {
             "Active": false,
@@ -122,7 +126,7 @@
     },
     "EQSMode": false,
     "FEMOrder": 2,
-    "OutputPath": "./Results_10000_350_sigma20_Cell_with_AIS_noEncap_noDTI_test",
+    "OutputPath": "./Results_1000_350_sigma6_myGilliesSTNwithAIS_noEncap_noDTI_test",
     "ComputeImpedance": true,
     "ExportVTK": true,
     "ExportElectrode": true
