@@ -537,16 +537,9 @@ class VolumeConductor(ABC):
                 for key in lfp_at_contact:
                     if key == "time":
                         continue
-                    if key == "E1C1":
-                        contact = "c1"
-                    elif key == "E1C2":
-                        contact = "c2"
-                    elif key == "E1C3":
-                        contact = "c3"
-                    elif key == "E1C4":
-                        contact = "c4"
-                    else:
-                        raise ValueError(f"Unexpected contact name {key} in lfp_at_contact")
+                if not key.startswith("E1C"):
+                    raise ValueError(f"Unexpected contact name {key} in lfp_at_contact")
+                contact = "c" + key[len("E1C"):]
                 df = pd.DataFrame(lfp_at_contact)
                 radius_tag = "" if nrn_signal.LFP_radius is None else f"_{nrn_signal.LFP_radius:.1f}"
                 df.to_csv(
