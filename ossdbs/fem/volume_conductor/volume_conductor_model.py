@@ -548,8 +548,9 @@ class VolumeConductor(ABC):
                     else:
                         raise ValueError(f"Unexpected contact name {key} in lfp_at_contact")
                 df = pd.DataFrame(lfp_at_contact)
+                radius_tag = "" if nrn_signal.LFP_radius is None else f"_{nrn_signal.LFP_radius:.1f}"
                 df.to_csv(
-                    os.path.join(self.output_path, f"{contact}_lfp_at_contact_in_time_{nrn_signal.LFP_radius:.1f}.csv"), index=False
+                    os.path.join(self.output_path, f"{contact}_lfp_at_contact_in_time{radius_tag}.csv"), index=False
                 )
 
         # export time domain solution if a proper signal has been passed
@@ -910,6 +911,12 @@ class VolumeConductor(ABC):
                 )
         _logger.debug(f"Voltage drop for impedance: {voltage_diff}")
         _logger.debug(f"Power after surface imp: {power}")
+        if power == 0:
+            # Expected at frequencies with zero signal amplitude (e.g. the
+            # DC component of a charge-balanced pulse), where the trivial
+            # all-zero solution gives 0/0. Callers (e.g. get_scale_factor)
+            # already treat a non-finite impedance as "no current flows".
+            return complex(np.nan, np.nan) if self.is_complex else np.nan
         return voltage_diff * np.conj(voltage_diff) / power
 
     def estimate_currents(self) -> dict:
