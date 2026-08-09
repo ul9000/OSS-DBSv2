@@ -70,3 +70,11 @@ figures/
 examples/Electrochemistry/*.csv
 # Other generated files
 *.spec
+
+# Local simulation scripts
+simulation_scripts/
+
+# Local input files
+I_filtered*
+dataset_description*
+Rat_head_Andrea_cleaned.brep

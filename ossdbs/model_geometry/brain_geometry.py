@@ -150,7 +150,9 @@ class BrainGeometry:
         if self._rotate_initial_geo:
             _logger.debug("Rotate initial geometry")
             # we rotate 180 degrees around z, that should usually fix the issue
-            sphere = sphere.Rotate(netgen.occ.Axis(center, (0, 0, 1)), 180)
+            sphere = sphere.Rotate(
+                netgen.occ.Axis(netgen.occ.Pnt(center), (0, 0, 1)), 180
+            )
         return self._affine_trafo(sphere)
 
     def _create_box(self) -> netgen.occ.Solid:
