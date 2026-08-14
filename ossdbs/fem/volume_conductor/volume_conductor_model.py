@@ -5,6 +5,7 @@
 import json
 import logging
 import os
+import re
 import time
 from abc import ABC, abstractmethod
 import csv
@@ -537,9 +538,16 @@ class VolumeConductor(ABC):
                 for key in lfp_at_contact:
                     if key == "time":
                         continue
-                if not key.startswith("E1C"):
+                match = re.fullmatch(r"E(\d+)C(\d+)", key)
+                if not match:
                     raise ValueError(f"Unexpected contact name {key} in lfp_at_contact")
-                contact = "c" + key[len("E1C"):]
+                electrode_idx, contact_idx = match.groups()
+                # E1 keeps the original bare "c{n}" filename (every existing sweep
+                # only ever recorded from electrode 1); any other electrode (e.g. a
+                # second, bilateral lead) gets an "e{m}c{n}" tag instead of colliding
+                # with electrode 1's contact numbering or crashing outright.
+                contact = f"c{contact_idx}" if electrode_idx == "1" \
+                    else f"e{electrode_idx}c{contact_idx}"
                 df = pd.DataFrame(lfp_at_contact)
                 radius_tag = "" if nrn_signal.LFP_radius is None else f"_{nrn_signal.LFP_radius:.1f}"
                 df.to_csv(
