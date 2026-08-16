@@ -237,6 +237,7 @@ class VolumeConductor(ABC):
 
         # whether to exclude axons with points in CSF and encapsulation layer
         exclude_csf_encap = False
+        nrn_center = None
         if nrn_signal is not None:
             exclude_csf_encap = True
             nrn_center = self.model_geometry._electrodes[0]._position+ np.array([0, 0, 0.125])  # shift center to middle of contact 0, TODO make this a parameter
@@ -444,7 +445,9 @@ class VolumeConductor(ABC):
                 for point_model in point_models:
                     point_model.output_path = self.output_path
                     point_model.prepare_VCM_specific_evaluation(
-                        self.mesh, self.conductivity_cf, exclude_csf_encap, nrn_signal.LFP_radius, nrn_center
+                        self.mesh, self.conductivity_cf, exclude_csf_encap,
+                        nrn_signal.LFP_radius if nrn_signal is not None else None,
+                        nrn_center,
                     )
                     point_model.prepare_frequency_domain_data_structure(
                         len(self.signal.frequencies), out_of_core
