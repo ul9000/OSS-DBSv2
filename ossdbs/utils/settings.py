@@ -27,6 +27,7 @@ class Settings:
         "TipPosition": {"x[mm]": 0.0, "y[mm]": 0.0, "z[mm]": 0.0},
         "Contacts": [],
         "EncapsulationLayer": {},
+        "RequireAllContactsInBrain": True,
     }
 
     CONTACT_SETTING: ClassVar[dict] = {
@@ -104,7 +105,8 @@ class Settings:
             "Preconditioner": "bddc",
             "PreconditionerKwargs": {},
             "MaximumSteps": 10000,
-            "Precision": 1e-12,
+            "RelativeTolerance": 1e-8,
+            "AbsoluteTolerance": 1e-8,
         },
         "PointModel": {
             "Pathway": {"Active": False, "FileName": "", "ExportField": False},

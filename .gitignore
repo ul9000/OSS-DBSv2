@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 .env/
 venv/
+.venv/
 .tox/
 
 # Auto-generated version file
@@ -37,6 +38,8 @@ meshsizes.txt
 # Ignore specific file types
 *.vol.gz
 *.vtu
+*.vtm
+*.vtp
 *.nii.gz
 *.nii
 *.stp
@@ -78,3 +81,6 @@ simulation_scripts/
 I_filtered*
 dataset_description*
 Rat_head_Andrea_cleaned.brep
+
+# Derived from the benchmark records it sits beside; regenerate with collect_results.py
+examples/ConvergenceStudy/Benchmark/results*/benchmark_summary.csv

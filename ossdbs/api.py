@@ -112,6 +112,10 @@ def generate_electrodes(settings: dict):
             electrode.encapsulation_thickness = electrode_parameters[
                 "EncapsulationLayer"
             ]["Thickness[mm]"]
+        electrode.require_all_contacts = electrode_parameters.get(
+            "RequireAllContactsInBrain", True
+        )
+        electrode.set_required_contacts(electrode_parameters)
         electrodes.append(electrode)
 
     if settings.get("ExportElectrode", False):
@@ -304,6 +308,9 @@ def prepare_solver(settings):
     """Set up solver and preconditioner."""
     _logger.info("Preparing solver")
     parameters = settings["Solver"]
+    absolute_tolerance = parameters.get("AbsoluteTolerance")
+    if absolute_tolerance is not None and absolute_tolerance <= 0:
+        raise ValueError("Solver.AbsoluteTolerance must be positive or null.")
     solver_type = parameters["Type"]
     solver = SOLVERS[solver_type]
     preconditioner_kwargs = parameters["PreconditionerKwargs"]
@@ -314,7 +321,8 @@ def prepare_solver(settings):
     return solver(
         precond_par=preconditioner,
         maxsteps=parameters["MaximumSteps"],
-        precision=parameters["Precision"],
+        relative_tolerance=parameters["RelativeTolerance"],
+        absolute_tolerance=parameters["AbsoluteTolerance"],
     )
 
 
@@ -485,7 +493,7 @@ def read_neuron_currents(settings) -> dict:
     ) # reshape to (n_signals, n_timepoints)
     return neuron_currents_data
 
-def prepare_stimulation_signal(settings, nrn_signal) -> FrequencyDomainSignal:
+def prepare_stimulation_signal(settings, nrn_signal=None) -> FrequencyDomainSignal:
     """Prepare the frequency-domain representation of stimulation signal."""
     signal_settings = settings["StimulationSignal"]
     signal_type = signal_settings["Type"]
@@ -532,7 +540,11 @@ def prepare_stimulation_signal(settings, nrn_signal) -> FrequencyDomainSignal:
 
 
 def run_volume_conductor_model(
-    settings, volume_conductor, frequency_domain_signal,nrn_signal, truncation_time=None
+    settings,
+    volume_conductor,
+    frequency_domain_signal,
+    truncation_time=None,
+    nrn_signal=None,
 ):
     """Run the volume conductor model at all required frequencies.
 
@@ -580,7 +592,6 @@ def run_volume_conductor_model(
 
     vcm_timings = volume_conductor.run_full_analysis(
         frequency_domain_signal,
-        nrn_signal,
         compute_impedance,
         export_vtk,
         point_models=point_models,
@@ -592,6 +603,7 @@ def run_volume_conductor_model(
         truncation_time=truncation_time,
         estimate_currents=compute_currents,
         vtk_subdivision=vtk_subdivision,
+        nrn_signal=nrn_signal,
     )
 
     _run_impedance_analysis(settings, volume_conductor, frequency_domain_signal)
@@ -629,7 +641,14 @@ def _run_impedance_analysis(
     analyzer.export(settings["OutputPath"])
 
 
-def run_stim_sets(settings, geometry, conductivity, solver, frequency_domain_signal):
+def run_stim_sets(
+    settings,
+    geometry,
+    conductivity,
+    solver,
+    frequency_domain_signal,
+    truncation_time=None,
+):
     """Run StimSets batch workflow: compute unit solutions per contact.
 
     For each non-ground contact, sets up a unit-current solve (1 A on
@@ -649,6 +668,11 @@ def run_stim_sets(settings, geometry, conductivity, solver, frequency_domain_sig
         Configured FEM solver.
     frequency_domain_signal : FrequencyDomainSignal
         Signal defining the frequencies and amplitudes to solve.
+    truncation_time : float, optional
+        If set, truncate the time-domain reconstruction of every unit
+        solution to this duration. All contacts are truncated
+        identically, so the superposition in :func:`run_PAM` stays
+        consistent.
     """
     _logger.info("Run StimSets volume conductor model")
 
@@ -726,6 +750,7 @@ def run_stim_sets(settings, geometry, conductivity, solver, frequency_domain_sig
             adaptive_mesh_refinement_settings=settings["Mesh"][
                 "AdaptiveMeshRefinement"
             ],
+            truncation_time=truncation_time,
             vtk_subdivision=vtk_subdivision,
         )
         _logger.info(f"Timing for contact {contact.name}: {vcm_timings}")
