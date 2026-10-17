@@ -65,7 +65,7 @@
             "Blood": 4
         },
         "DiffusionTensorActive": false,
-        "DTIPath": "../../input_files/DTI_truncated_FSL_order_Norm_mapping.nii.gz"
+        "DTIPath": ""
     },
     "DielectricModel": {
         "Type": "ColeCole4"
@@ -102,7 +102,7 @@
     "PointModel": {
         "Pathway": {
             "Active": true,
-            "FileName": "../../input_files/I_filtered_1000_350_sigma6_myGilliesSTNwithAIS.h5"
+            "FileName": "../../input_files/nework.h5"
         },
         "Lattice": {
             "Active": false,
@@ -126,7 +126,7 @@
     },
     "EQSMode": false,
     "FEMOrder": 2,
-    "OutputPath": "./Results_1000_350_sigma6_myGilliesSTNwithAIS_noEncap_noDTI_test",
+    "OutputPath": "./Results",
     "ComputeImpedance": true,
     "ExportVTK": true,
     "ExportElectrode": true
