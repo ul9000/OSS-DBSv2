@@ -92,3 +92,4 @@ input_test_cases/input_case15/plot_orientation_comparison .py
 input_test_cases/input_case15/plot_sigma_comparison.py
 input_test_cases/input_case15/plotrms_bipolar_lfp.py
 input_test_cases/input_case15/input_ratvta.json
+input_test_cases/input_case15/rat_data/
