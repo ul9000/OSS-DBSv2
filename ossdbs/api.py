@@ -333,7 +333,8 @@ def generate_point_models(settings: dict):
         file_name = settings["PointModel"]["Pathway"]["FileName"]
         _logger.info(f"Import neuron geometries stored in {file_name}")
         export_field = settings["PointModel"]["Pathway"]["ExportField"]
-        stim_type = settings["StimulationSignal"]["Type"]
+        # the Pathway default "None" means no neuron current (Im) signal
+        stim_type = settings.get("StimulationSignal", {}).get("Type", "None")
         point_models.append(Pathway(file_name, export_field=export_field, stim_type=stim_type))
     if settings["PointModel"]["Lattice"]["Active"]:
         shape_par = settings["PointModel"]["Lattice"]["Shape"]

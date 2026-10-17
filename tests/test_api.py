@@ -228,7 +228,30 @@ class TestGeneratePointModels:
         }
         result = generate_point_models(settings)
         assert len(result) == 1
-        mock_pathway.assert_called_once_with("test_pathway.h5", export_field=True)
+        mock_pathway.assert_called_once_with(
+            "test_pathway.h5", export_field=True, stim_type="None"
+        )
+
+    @patch("ossdbs.api.Pathway")
+    def test_pathway_point_model_neuron_currents(self, mock_pathway):
+        """Test Pathway receives the stimulation type for LFP (Im) runs."""
+        mock_pathway.return_value = MagicMock()
+        settings = {
+            "StimulationSignal": {"Type": "Im"},
+            "PointModel": {
+                "Pathway": {
+                    "Active": True,
+                    "FileName": "test_pathway.h5",
+                    "ExportField": False,
+                },
+                "Lattice": {"Active": False},
+                "VoxelLattice": {"Active": False},
+            },
+        }
+        generate_point_models(settings)
+        mock_pathway.assert_called_once_with(
+            "test_pathway.h5", export_field=False, stim_type="Im"
+        )
 
     def test_multiple_point_models(self):
         """Test multiple point models active."""

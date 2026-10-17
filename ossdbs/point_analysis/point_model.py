@@ -418,6 +418,9 @@ class PointModel(ABC):
         -----
         TODO Type hint
         """
+        # no unknown material defined, so no point can be inside it
+        if "Unknown" not in conductivity_cf.materials:
+            return np.zeros(len(self.lattice), dtype=bool)
         material_distribution = conductivity_cf.material_distribution(mesh)
         return np.isclose(
             material_distribution(mesh.locate_points(self.lattice)),

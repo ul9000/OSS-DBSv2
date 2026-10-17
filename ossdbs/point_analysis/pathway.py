@@ -304,11 +304,26 @@ class Pathway(PointModel):
 
         return filtered_points
 
-    def filter_csf_encap_radius(
-        self, inside_csf: np.ndarray, inside_encap: np.ndarray, outside_radius: np.ndarray, inside_unknown: np.ndarray
+    def filter_csf_encap(
+        self, inside_csf: np.ndarray, inside_encap: np.ndarray
     ) -> None:
         """Change axon status if a single point of the axon is
         within the CSF or encapsulation layer.
+
+        See :meth:`filter_csf_encap_radius` for the parameters.
+        """
+        self.filter_csf_encap_radius(inside_csf, inside_encap)
+
+    def filter_csf_encap_radius(
+        self,
+        inside_csf: np.ndarray,
+        inside_encap: np.ndarray,
+        outside_radius: np.ndarray | None = None,
+        inside_unknown: np.ndarray | None = None,
+    ) -> None:
+        """Change axon status if a single point of the axon is
+        within the CSF, encapsulation layer or unknown region,
+        or outside the LFP radius.
 
         Parameters
         ----------
@@ -319,7 +334,19 @@ class Pathway(PointModel):
         inside_encap: np.ndarray
             The array contains 1 if the corresponding point is
             inside the encapsulation layer, 0 otherwise.
+
+        outside_radius: np.ndarray, optional
+            The array contains 1 if the corresponding point is
+            outside the LFP radius, 0 otherwise. Not checked if None.
+
+        inside_unknown: np.ndarray, optional
+            The array contains 1 if the corresponding point is
+            inside the unknown region, 0 otherwise. Not checked if None.
         """
+        if outside_radius is None:
+            outside_radius = np.zeros_like(inside_csf, dtype=bool)
+        if inside_unknown is None:
+            inside_unknown = np.zeros_like(inside_csf, dtype=bool)
         idx_axon = 0
         for population in self._populations:
             for axon in sorted(population.axons, key=lambda x: int(x.name[4:])):
