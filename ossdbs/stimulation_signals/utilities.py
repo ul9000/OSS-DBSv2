@@ -49,16 +49,22 @@ def retrieve_time_domain_signal_from_fft(
     timesteps = get_timesteps(cutoff_frequency, base_frequency, len(signal))
     return timesteps, signal
 
-def retrieve_lfp_time_domain_signal_from_fft(fft_signal: np.ndarray) -> np.ndarray:
+def retrieve_lfp_time_domain_signal_from_fft(
+    fft_signal: np.ndarray, signal_length: int | None = None
+) -> np.ndarray:
     """Compute time-domain signal via fft.
     Does not calculate timesteps, as they are stored in  the neuron current signal object.
-        
+
     Parameters
     ----------
     fft_signal: np.ndarray
         Frequency-domain signal
+    signal_length: int, optional
+        Number of samples of the original time-domain signal. Without it,
+        irfft returns 2 * (len(fft_signal) - 1) samples, which is one sample
+        short for an odd-length original signal.
     """
-    signal = irfft(fft_signal, axis=0, workers=-1)
+    signal = irfft(fft_signal, n=signal_length, axis=0, workers=-1)
     return signal.real
 
 

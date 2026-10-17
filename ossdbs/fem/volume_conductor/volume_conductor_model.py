@@ -240,7 +240,15 @@ class VolumeConductor(ABC):
         nrn_center = None
         if nrn_signal is not None:
             exclude_csf_encap = True
-            nrn_center = self.model_geometry._electrodes[0]._position+ np.array([0, 0, 0.125])  # shift center to middle of contact 0, TODO make this a parameter
+            if nrn_signal.LFP_center is not None:
+                nrn_center = np.array(
+                    [nrn_signal.LFP_center[key] for key in ("x[mm]", "y[mm]", "z[mm]")]
+                )
+            else:
+                # default: shift center to middle of contact 0
+                nrn_center = self.model_geometry._electrodes[0]._position + np.array(
+                    [0, 0, 0.125]
+                )
 
         # always compute impedance for CC with 2 contacts
         if self.current_controlled and len(self.contacts.active) == 2:
@@ -1527,7 +1535,12 @@ class VolumeConductor(ABC):
                 optimize=True,
             )
         # lfp_at_electrode_contact *= scaling
-        lfp_time_domain = retrieve_lfp_time_domain_signal_from_fft(lfp_at_electrode_contact)
+        signal_length = None
+        if nrn_signal is not None and nrn_signal.simulation_times is not None:
+            signal_length = len(nrn_signal.simulation_times)
+        lfp_time_domain = retrieve_lfp_time_domain_signal_from_fft(
+            lfp_at_electrode_contact, signal_length
+        )
 
         return lfp_time_domain, recording_contact
 

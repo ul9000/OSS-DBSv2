@@ -14,6 +14,7 @@ from ossdbs.stimulation_signals.utilities import (
     get_octave_band_indices,
     get_timesteps,
     reconstruct_time_signals,
+    retrieve_lfp_time_domain_signal_from_fft,
 )
 
 
@@ -417,3 +418,23 @@ class TestOctaveBandFunctions:
             get_indices_in_octave_band(
                 freq_idx, frequency_indices, cutoff_frequency_index
             )
+
+
+class TestRetrieveLFPTimeDomainSignal:
+    """Test the irfft round trip used for the LFP at the recording contact."""
+
+    @pytest.mark.parametrize("n_samples", [7500, 7501])
+    def test_round_trip_with_signal_length(self, n_samples):
+        """Even and odd lengths are recovered when signal_length is given."""
+        rng = np.random.default_rng(0)
+        signal = rng.standard_normal(n_samples)
+        result = retrieve_lfp_time_domain_signal_from_fft(
+            np.fft.rfft(signal), n_samples
+        )
+        assert result.shape == (n_samples,)
+        np.testing.assert_allclose(result, signal, atol=1e-10)
+
+    def test_odd_length_is_one_short_without_signal_length(self):
+        """Documents the default irfft length that signal_length corrects."""
+        spectrum = np.fft.rfft(np.ones(7501))
+        assert retrieve_lfp_time_domain_signal_from_fft(spectrum).shape == (7500,)
