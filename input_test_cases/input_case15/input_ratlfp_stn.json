@@ -102,7 +102,7 @@
     "PointModel": {
         "Pathway": {
             "Active": true,
-            "FileName": "../../input_files/nework.h5"
+            "FileName": "../../input_files/network.h5"
         },
         "Lattice": {
             "Active": false,
